@@ -133,6 +133,43 @@ describe.skipIf(!hasLiveProject)("completion + certificates (T-040, live Supabas
     expect(a.certificateCode).not.toBe(b.certificateCode);
   });
 
+  it("snapshots the course's certificate template (T-110) onto newly issued certificates", async () => {
+    const c = await createCourse(svc, owner.id, { slug: `${tag}-tmpl`, title: `${tag} Templated` });
+    courseIds.push(c.courseId);
+
+    const { error: tmplErr } = await owner.client.rpc("upsert_certificate_template", {
+      p_course_id: c.courseId,
+      p_signature_title: "Lead Instructor",
+      p_closing_message: "Keep building.",
+    });
+    expect(tmplErr).toBeNull();
+
+    const enr = await enroll(c);
+    await complete(enr, c.lessonIds);
+    const result = await evaluateCompletion(svc, enr);
+    expect(result.complete).toBe(true);
+
+    const { data: cert } = await svc
+      .from("certificates")
+      .select("signature_title, closing_message")
+      .eq("enrollment_id", enr)
+      .single();
+    expect(cert).toMatchObject({ signature_title: "Lead Instructor", closing_message: "Keep building." });
+
+    // Editing the template afterwards never rewrites the already-issued certificate.
+    await owner.client.rpc("upsert_certificate_template", {
+      p_course_id: c.courseId,
+      p_signature_title: "Changed",
+      p_closing_message: "Changed message.",
+    });
+    const { data: certAfter } = await svc
+      .from("certificates")
+      .select("signature_title, closing_message")
+      .eq("enrollment_id", enr)
+      .single();
+    expect(certAfter).toMatchObject({ signature_title: "Lead Instructor", closing_message: "Keep building." });
+  });
+
   it("needs every assessment passed before completing", async () => {
     const c = await createCourse(svc, owner.id, {
       slug: `${tag}-d`,
@@ -248,12 +285,14 @@ describe.skipIf(!hasLiveProject)("completion + certificates (T-040, live Supabas
       expect(error).toBeNull();
       expect(data).toHaveLength(1);
       expect(Object.keys(data![0]).sort()).toEqual([
+        "closing_message",
         "code",
         "course_title",
         "instructor_name",
         "issued_at",
         "learner_name",
         "revoked_at",
+        "signature_title",
         "status",
       ]);
       expect(data![0]).toMatchObject({ code, status: "issued", learner_name: "Grace Hopper" });

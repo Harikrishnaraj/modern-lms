@@ -1,0 +1,276 @@
+name: CI
+
+# T-248 (F-947, ADR-019). Every PR and every push to main runs the project's own definition of
+# "green" (`npm run check`: typecheck → lint → unit + live integration tests → feature registry →
+# Next.js build), then the Playwright suite, then (pushes to main, or a manual run) builds the
+# Docker image and deploys it to the VPS (ADR-036, docs/DEPLOY.md).
+#
+# T-251 / ADR-034: each job starts its own local Supabase stack (Supabase CLI + Docker) from
+# supabase/config.toml and supabase/migrations, seeds it with scripts/seed.mjs, and tests against
+# it. CI never touches the hosted project (sharing it took the free-tier database down) and needs
+# no repository secrets, so fork PRs get the full run too.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # A newer push supersedes a PR run, but never interrupts a deploy from main.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  NEXT_PUBLIC_APP_URL: http://localhost:3000
+  # ADR-029: SCORM runs on a content origin distinct from the app (same server, other host name),
+  # as in production; without it the player falls back to the single-frame sandbox and the E2E
+  # package's ADL parent search finds no API.
+  NEXT_PUBLIC_SCORM_CONTENT_ORIGIN: http://127.0.0.1:3000
+  NEXT_TELEMETRY_DISABLED: "1"
+  SUPABASE_CLI_VERSION: 2.119.0
+  # The local stack mirrors the hosted Google provider (T-165); CI never completes a Google sign-in.
+  SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID: ci-placeholder.apps.googleusercontent.com
+  SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET: ci-placeholder
+
+jobs:
+  check:
+    name: Check (typecheck, lint, tests, features, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+      - name: Start local Supabase, export its URL and keys, seed it
+        run: |
+          supabase start
+          eval "$(supabase status -o env)"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+          NEXT_PUBLIC_SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" npm run seed
+      - name: npm run check
+        run: npm run check
+
+  e2e:
+    # The full suite (desktop + mobile, ~450 tests) is split into shards that run in parallel;
+    # each shard has its own Supabase stack, builds the app and starts it.
+    name: E2E (Playwright) ${{ matrix.shard }}/6
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+      - name: Start local Supabase, export its URL and keys, seed it
+        run: |
+          supabase start
+          eval "$(supabase status -o env)"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+          NEXT_PUBLIC_SUPABASE_URL="$API_URL" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" npm run seed
+      - name: Playwright (builds and starts the app itself)
+        run: npx playwright test --shard=${{ matrix.shard }}/6
+      - name: Print the page snapshot of each failed test
+        if: failure()
+        run: |
+          find test-results -name error-context.md | sort | while read -r f; do
+            echo "::group::$f"; sed -n '1,150p' "$f"; echo "::endgroup::"
+          done
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-${{ matrix.shard }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  deploy:
+    # ADR-036: build the production image, push it to GitHub's container registry and roll it out
+    # on the VPS over SSH. Runs only after Check and every E2E shard pass, on pushes to main or a
+    # manual "Run workflow". Skipped with a notice until the VPS/Supabase secrets exist.
+    name: Deploy to VPS (production)
+    needs: [check, e2e]
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    env:
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_SSH_PORT: ${{ vars.VPS_SSH_PORT || '22' }}
+      PROD_SUPABASE_URL: ${{ secrets.PROD_SUPABASE_URL }}
+      PROD_SUPABASE_ANON_KEY: ${{ secrets.PROD_SUPABASE_ANON_KEY }}
+      PROD_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.PROD_SUPABASE_SERVICE_ROLE_KEY }}
+      PROD_RESEND_API_KEY: ${{ secrets.PROD_RESEND_API_KEY }}
+      PROD_RESEND_FROM_EMAIL: ${{ vars.PROD_RESEND_FROM_EMAIL }}
+      PROD_CRON_SECRET: ${{ secrets.PROD_CRON_SECRET }}
+      # Optional: your own domain names. Without them the app gets free sslip.io names for the IP.
+      PROD_APP_HOST: ${{ vars.PROD_APP_HOST }}
+      PROD_CONTENT_HOST: ${{ vars.PROD_CONTENT_HOST }}
+    steps:
+      - name: Check deploy secrets
+        id: gate
+        run: |
+          missing=""
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY PROD_SUPABASE_URL PROD_SUPABASE_ANON_KEY PROD_SUPABASE_SERVICE_ROLE_KEY; do
+            [ -n "${!v}" ] || missing="$missing $v"
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice::VPS deploy skipped; missing repository secrets:$missing (see docs/DEPLOY.md)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Work out hostnames and image name
+        if: steps.gate.outputs.ready == 'true'
+        id: names
+        run: |
+          app_host="$PROD_APP_HOST"; content_host="$PROD_CONTENT_HOST"
+          if [ -z "$app_host" ] || [ -z "$content_host" ]; then
+            if [[ ! "$VPS_HOST" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::error::VPS_HOST is not an IPv4 address; set PROD_APP_HOST and PROD_CONTENT_HOST variables."
+              exit 1
+            fi
+            dashed="${VPS_HOST//./-}"
+            app_host="${app_host:-$dashed.sslip.io}"
+            content_host="${content_host:-content-$dashed.sslip.io}"
+          fi
+          repo="${GITHUB_REPOSITORY,,}"
+          {
+            echo "app_host=$app_host"
+            echo "content_host=$content_host"
+            echo "image=ghcr.io/$repo:${GITHUB_SHA}"
+            echo "image_latest=ghcr.io/$repo:latest"
+          } >> "$GITHUB_OUTPUT"
+          echo "Deploying to https://$app_host (SCORM content: https://$content_host)"
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.ready == 'true'
+      - uses: docker/setup-buildx-action@v3
+        if: steps.gate.outputs.ready == 'true'
+      - uses: docker/login-action@v3
+        if: steps.gate.outputs.ready == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push the image
+        if: steps.gate.outputs.ready == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.names.outputs.image }}
+            ${{ steps.names.outputs.image_latest }}
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ env.PROD_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ env.PROD_SUPABASE_ANON_KEY }}
+            NEXT_PUBLIC_APP_URL=https://${{ steps.names.outputs.app_host }}
+            NEXT_PUBLIC_SCORM_CONTENT_ORIGIN=https://${{ steps.names.outputs.content_host }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Prepare SSH
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -n "$VPS_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "$VPS_SSH_PORT" -H "$VPS_HOST" > ~/.ssh/known_hosts
+          fi
+
+      - name: Copy the stack and write the server environment
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          APP_HOST: ${{ steps.names.outputs.app_host }}
+          CONTENT_HOST: ${{ steps.names.outputs.content_host }}
+          APP_IMAGE: ${{ steps.names.outputs.image }}
+        run: |
+          ssh_opts=(-i ~/.ssh/deploy_key -p "$VPS_SSH_PORT" -o BatchMode=yes)
+          ssh "${ssh_opts[@]}" "$VPS_USER@$VPS_HOST" 'mkdir -p ~/modern-lms'
+          scp -i ~/.ssh/deploy_key -P "$VPS_SSH_PORT" -o BatchMode=yes deploy/docker-compose.yml deploy/Caddyfile "$VPS_USER@$VPS_HOST:modern-lms/"
+          umask 077
+          {
+            echo "APP_IMAGE=$APP_IMAGE"
+            echo "APP_HOST=$APP_HOST"
+            echo "CONTENT_HOST=$CONTENT_HOST"
+            echo "NEXT_PUBLIC_APP_URL=https://$APP_HOST"
+            echo "NEXT_PUBLIC_SCORM_CONTENT_ORIGIN=https://$CONTENT_HOST"
+            echo "NEXT_PUBLIC_SUPABASE_URL=$PROD_SUPABASE_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$PROD_SUPABASE_ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$PROD_SUPABASE_SERVICE_ROLE_KEY"
+            echo "RESEND_API_KEY=$PROD_RESEND_API_KEY"
+            echo "RESEND_FROM_EMAIL=$PROD_RESEND_FROM_EMAIL"
+            echo "CRON_SECRET=$PROD_CRON_SECRET"
+          } > "$RUNNER_TEMP/server.env"
+          ssh "${ssh_opts[@]}" "$VPS_USER@$VPS_HOST" 'umask 077; cat > ~/modern-lms/.env' < "$RUNNER_TEMP/server.env"
+          rm -f "$RUNNER_TEMP/server.env"
+
+      - name: Roll out
+        if: steps.gate.outputs.ready == 'true'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+        run: |
+          ssh_opts=(-i ~/.ssh/deploy_key -p "$VPS_SSH_PORT" -o BatchMode=yes)
+          # The token goes over stdin, so it never appears in a process list on the server.
+          printf '%s' "$GHCR_TOKEN" | ssh "${ssh_opts[@]}" "$VPS_USER@$VPS_HOST" "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+          ssh "${ssh_opts[@]}" "$VPS_USER@$VPS_HOST" \
+            'cd ~/modern-lms && docker compose pull && docker compose up -d --remove-orphans; rc=$?; docker logout ghcr.io >/dev/null; docker image prune -f >/dev/null; exit $rc'
+
+      - name: Smoke check
+        if: steps.gate.outputs.ready == 'true'
+        run: |
+          url="https://${{ steps.names.outputs.app_host }}/"
+          for i in $(seq 1 24); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "$url" || true)
+            if [ "$code" = "200" ]; then echo "$url is up"; exit 0; fi
+            echo "attempt $i: HTTP $code"; sleep 5
+          done
+          echo "::error::$url did not answer 200 within 2 minutes"; exit 1
+
+      - name: Remove the SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

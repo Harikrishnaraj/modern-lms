@@ -14,6 +14,8 @@ export function AssignmentForm({
   allowText,
   allowFile,
   maxFileMb,
+  accept,
+  typeList,
   initialText,
   replacing,
 }: {
@@ -21,6 +23,10 @@ export function AssignmentForm({
   allowText: boolean;
   allowFile: boolean;
   maxFileMb: number;
+  /** `accept` attribute for the allowed file types, e.g. ".pdf,.doc". */
+  accept: string;
+  /** Human list of the allowed types, e.g. "PDF, DOC or DOCX". */
+  typeList: string;
   initialText: string;
   replacing: boolean;
 }) {
@@ -99,11 +105,11 @@ export function AssignmentForm({
               type="file"
               onChange={onPick}
               disabled={busy}
-              accept=".pdf,.docx,.zip,.txt,.png,.jpg,.jpeg"
+              accept={accept}
               className="text-sm font-normal"
             />
           </label>
-          <p className="text-xs text-text-secondary">PDF, DOCX, ZIP, TXT, PNG or JPEG, up to {maxFileMb} MB.</p>
+          <p className="text-xs text-text-secondary">{typeList}, up to {maxFileMb} MB.</p>
           {file && (
             <p className="inline-flex items-center gap-1 text-sm">
               <Paperclip className="size-4" aria-hidden="true" />

@@ -1,0 +1,57 @@
+# Production stack on the VPS (ADR-036). GitHub Actions copies this file and the Caddyfile to
+# ~/modern-lms on the server, writes ~/modern-lms/.env (image tag, hostnames, server secrets) and
+# runs `docker compose up -d`. See docs/DEPLOY.md.
+name: modern-lms
+
+services:
+  app:
+    image: ${APP_IMAGE:?APP_IMAGE is set by the deploy job}
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    expose:
+      - "3000"
+
+  # TLS termination + reverse proxy. Certificates for both hostnames are issued and renewed
+  # automatically (Let's Encrypt); they persist in the caddy_data volume.
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_HOST: ${APP_HOST:?APP_HOST is set by the deploy job}
+      CONTENT_HOST: ${CONTENT_HOST:?CONTENT_HOST is set by the deploy job}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  # Hourly trigger for scheduled report exports (src/app/api/cron/scheduled-reports).
+  cron:
+    image: curlimages/curl:8.10.1
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      CRON_SECRET: ${CRON_SECRET:-}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        while true; do
+          sleep 3600
+          curl -fsS -H "Authorization: Bearer $$CRON_SECRET" http://app:3000/api/cron/scheduled-reports || true
+          echo
+        done
+
+volumes:
+  caddy_data:
+  caddy_config:

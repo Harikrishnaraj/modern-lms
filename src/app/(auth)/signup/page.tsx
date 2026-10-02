@@ -2,6 +2,7 @@ import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { SignUpForm } from "@/components/forms/signup-form";
+import { AuthDivider, GoogleSignInButton } from "@/components/forms/google-sign-in-button";
 import { signUp } from "@/features/auth/sign-up";
 
 export const metadata = { title: "Sign up" };
@@ -19,6 +20,8 @@ export default function SignUpPage() {
       <Card>
         <CardHeader title="Create your account" description="Start learning in minutes." />
         <CardContent>
+          <GoogleSignInButton label="Sign up with Google" />
+          <AuthDivider />
           <SignUpForm onSubmit={signUp} />
         </CardContent>
       </Card>

@@ -154,6 +154,10 @@ Assertions:
 - [ ] Verification page works.
 - [ ] Revoked certificate displays revoked status.
 - [ ] Private learner data is not exposed.
+- [ ] Instructor issued-list is scoped to their own courses only (T-110).
+- [ ] Instructor can save a certificate template (signature title, closing message) for a course they own (T-110).
+- [ ] An instructor cannot edit the certificate template of a course they do not own (T-110).
+- [ ] Saving a template never rewrites certificates already issued; only future issuances snapshot it (T-110).
 
 ## 10. Instructor E2E
 

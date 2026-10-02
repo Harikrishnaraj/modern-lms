@@ -1,4 +1,4 @@
-import { MessageSquare, Star, MessageCircleCheck, AlertCircle } from "lucide-react";
+import { Star, MessageCircleCheck, AlertCircle } from "lucide-react";
 import type { InstructorReviewSummary } from "@/features/instructor/reviews";
 import { Card, CardContent } from "@/components/ui/card";
 

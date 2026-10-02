@@ -82,6 +82,12 @@ export default async function AdminCoursesPage({
         }
       />
 
+      <div className="mb-4">
+        <Link href="/admin/courses/categories" className="text-sm text-primary hover:underline">
+          Manage categories
+        </Link>
+      </div>
+
       <nav aria-label="Course status" className="mb-4 flex flex-wrap gap-1 border-b border-border">
         {ADMIN_TABS.map((t) => (
           <Link

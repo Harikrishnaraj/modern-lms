@@ -8,6 +8,9 @@ test.use({ storageState: { cookies: [], origins: [] } });
 
 // F-212 / ADR-011: change a live course through a new draft version that a reviewer publishes.
 test.describe("course versioning", () => {
+  // Each test continues from the previous one (created data, state), so they must run in order
+  // in one worker; with fullyParallel they could land in different workers and fail.
+  test.describe.configure({ mode: "serial" });
   const svc = serviceClient();
   const tag = uniqueTag("cve");
   const userIds: string[] = [];

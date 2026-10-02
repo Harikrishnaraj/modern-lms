@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cleanup, createAssignment, createCourse, createUserWithRole, serviceClient, uniqueTag } from "../support/course-fixtures";
+import { rateLimit } from "@/services/rate-limit";
 
 let currentClient: SupabaseClient;
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => currentClient }));
@@ -116,6 +117,15 @@ describe.skipIf(!hasLiveProject)("assignments (T-081, live Supabase)", () => {
     expect(await requestSubmissionUpload(open.assignmentId, { name: "big.pdf", size: 2 * 1024 * 1024, type: "application/pdf" })).toEqual({ ok: false, error: "The file must be 1 MB or smaller." });
     expect(await requestSubmissionUpload(textOnly.assignmentId, { name: "a.pdf", size: 10, type: "application/pdf" })).toEqual({ ok: false, error: "This assignment does not accept files." });
     expect(await submitAssignment(open.assignmentId, { text: "x".repeat(20001), file: null })).toMatchObject({ ok: false });
+  });
+
+  it("rejects requesting an upload ticket while rate-limited (T-241, SECURITY §18)", async () => {
+    currentClient = learner.client;
+    vi.mocked(rateLimit).mockResolvedValueOnce(false);
+    expect(await requestSubmissionUpload(open.assignmentId, { name: "a.txt", size: 5, type: "text/plain" })).toEqual({
+      ok: false,
+      error: "Too many attempts. Please wait a while and try again.",
+    });
   });
 
   it("uploads a file directly to storage, records it, and removes the replaced file", async () => {

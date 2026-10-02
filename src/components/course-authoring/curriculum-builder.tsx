@@ -10,6 +10,7 @@ import {
   FileText,
   GripVertical,
   HelpCircle,
+  Package,
   Pencil,
   PlayCircle,
   Plus,
@@ -39,6 +40,7 @@ const TYPE_ICON: Record<LessonType, LucideIcon> = {
   text: FileText,
   quiz: HelpCircle,
   assignment: ClipboardList,
+  scorm: Package,
 };
 
 type Drag = { kind: "section"; id: string } | { kind: "lesson"; id: string; sectionId: string } | null;

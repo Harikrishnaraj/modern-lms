@@ -5,6 +5,7 @@ import { getCourseDetail } from "@/features/catalog/course-detail";
 import { can } from "@/lib/permissions/can";
 import { unmetPrerequisites } from "@/features/course-authoring/pricing-rules";
 import { createClient } from "@/lib/supabase/server";
+import { dispatchWebhookEvent } from "@/services/webhooks/dispatch";
 
 export type EnrollResult = { enrolled: true } | { error: string };
 
@@ -55,6 +56,9 @@ export async function enrollInCourse(slug: string): Promise<EnrollResult> {
   // 23505 = already enrolled (unique user_id + course_id): idempotent success.
   if (error && error.code !== "23505") {
     return { error: "We could not enroll you. Please try again." };
+  }
+  if (!error) {
+    await dispatchWebhookEvent("enrollment.created", { userId: user.id, courseId: course.id, courseSlug: course.slug });
   }
 
   revalidatePath(`/courses/${course.slug}`);

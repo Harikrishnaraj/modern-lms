@@ -51,11 +51,28 @@ export async function getDashboardData(
   const { inProgress } = splitLearning(learning);
   const continueLearning = inProgress[0] ?? null; // my_learning is ordered by recent activity
 
-  // Today's learning: the next unfinished lesson of each in-progress course, plus what was done today.
+  const enrollmentIds = learning.map((l) => l.enrollmentId);
+
+  // Independent of each other, so fetched concurrently rather than one round trip at a time
+  // (T-246: dashboard query count).
+  const [nextUpCourses, completedTodayResult, upcomingAssessments, recommendations] = await Promise.all([
+    Promise.all(inProgress.slice(0, NEXT_UP_LIMIT).map((item) => getPlayerCourse(supabase, user.id, item.slug))),
+    enrollmentIds.length
+      ? supabase
+          .from("lesson_progress")
+          .select("id", { count: "exact", head: true })
+          .in("enrollment_id", enrollmentIds)
+          .gte("completed_at", startOfUtcDay(new Date()))
+      : Promise.resolve({ count: 0 }),
+    loadUpcomingAssessments(supabase, user.id),
+    loadRecommendations(supabase, interestSlugs(onboarding?.interests), new Set(learning.map((l) => l.courseId))),
+  ]);
+
+  // Today's learning: the next unfinished lesson of each in-progress course.
   const nextUp: NextUp[] = [];
-  for (const item of inProgress.slice(0, NEXT_UP_LIMIT)) {
-    const course = await getPlayerCourse(supabase, user.id, item.slug);
-    if (!course?.enrolled) continue;
+  nextUpCourses.forEach((course, i) => {
+    if (!course?.enrolled) return;
+    const item = inProgress[i];
     const lessonId = resumeLessonId(course.sections, course.completedLessonIds);
     const lesson = course.sections.flatMap((s) => s.lessons).find((l) => l.id === lessonId);
     if (lesson) {
@@ -68,29 +85,16 @@ export async function getDashboardData(
         minutes: lesson.durationMinutes,
       });
     }
-  }
-
-  const enrollmentIds = learning.map((l) => l.enrollmentId);
-  const { count: completedToday } = enrollmentIds.length
-    ? await supabase
-        .from("lesson_progress")
-        .select("id", { count: "exact", head: true })
-        .in("enrollment_id", enrollmentIds)
-        .gte("completed_at", startOfUtcDay(new Date()))
-    : { count: 0 };
+  });
 
   return {
     name: greetingName(profile?.full_name as string | null, user.email),
     continueLearning,
     inProgressCount: inProgress.length,
-    completedToday: completedToday ?? 0,
+    completedToday: completedTodayResult.count ?? 0,
     nextUp,
-    upcomingAssessments: await loadUpcomingAssessments(supabase, user.id),
-    recommendations: await loadRecommendations(
-      supabase,
-      interestSlugs(onboarding?.interests),
-      new Set(learning.map((l) => l.courseId)),
-    ),
+    upcomingAssessments,
+    recommendations,
   };
 }
 

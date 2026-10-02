@@ -21,10 +21,13 @@ export interface PasswordChangeInput {
   confirm: string;
 }
 
-export function validatePasswordChange(input: PasswordChangeInput): { ok: true } | { ok: false; errors: { current?: string; next?: string; confirm?: string } } {
+export function validatePasswordChange(
+  input: PasswordChangeInput,
+  minLength: number = PASSWORD_MIN,
+): { ok: true } | { ok: false; errors: { current?: string; next?: string; confirm?: string } } {
   const errors: { current?: string; next?: string; confirm?: string } = {};
   if (!input.current) errors.current = "Enter your current password.";
-  if (input.next.length < PASSWORD_MIN) errors.next = `Use at least ${PASSWORD_MIN} characters.`;
+  if (input.next.length < minLength) errors.next = `Use at least ${minLength} characters.`;
   else if (input.next.length > PASSWORD_MAX) errors.next = `Use at most ${PASSWORD_MAX} characters.`;
   else if (input.current && input.next === input.current) errors.next = "Choose a password different from your current one.";
   if (input.confirm !== input.next) errors.confirm = "The passwords do not match.";

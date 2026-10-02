@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import {
   cleanup,
   createCourse,
@@ -8,8 +8,14 @@ import {
   uniqueTag,
 } from "../support/course-fixtures";
 
-describe("instructor reviews (T-109, live Supabase)", () => {
-  const svc = serviceClient();
+const hasLiveProject = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+);
+
+describe.skipIf(!hasLiveProject)("instructor reviews (T-109, live Supabase)", () => {
+  const svc = hasLiveProject ? serviceClient() : (null as never);
   const tag = uniqueTag("inrev");
 
   const userIds: string[] = [];
@@ -25,9 +31,9 @@ describe("instructor reviews (T-109, live Supabase)", () => {
   let rating1Id: string;
   let rating2Id: string;
 
-  let teacher1Client: ReturnType<typeof createClient>;
-  let teacher2Client: ReturnType<typeof createClient>;
-  let anonClient: ReturnType<typeof createClient>;
+  let teacher1Client: SupabaseClient;
+  let teacher2Client: SupabaseClient;
+  let anonClient: SupabaseClient;
 
   beforeAll(async () => {
     // 1. Create fixtures

@@ -57,7 +57,7 @@ export function AddUserPanel({ actorIsSuper }: { actorIsSuper: boolean }) {
           <Input label="Email" type="email" name="email" required autoComplete="off" />
           {mode === "add" && <Input label="Full name" name="fullName" autoComplete="off" />}
           {mode === "add" && (
-            <Input label="Temporary password" type="password" name="password" autoComplete="new-password" hint={`At least ${MIN_PASSWORD_LENGTH} characters. Share it securely.`} />
+            <Input label="Temporary password" type="password" name="password" autoComplete="new-password" hint={`At least ${MIN_PASSWORD_LENGTH} characters (or the platform's configured minimum, if higher). Share it securely.`} />
           )}
           <label className="flex flex-col gap-1.5 text-sm font-medium">
             Role

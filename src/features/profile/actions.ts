@@ -6,6 +6,7 @@ import { createClient as createAnonClient } from "@supabase/supabase-js";
 import { sniffImage } from "@/lib/image";
 import { createClient } from "@/lib/supabase/server";
 import { RATE_LIMITED_MESSAGE, clientIp, rateLimit } from "@/services/rate-limit";
+import { getPlatformSettings } from "@/services/settings";
 import { AVATAR_BUCKET, supabaseStorage } from "@/services/storage";
 import { MAX_AVATAR_BYTES, avatarPathFromUrl, validateName, validatePasswordChange } from "./rules";
 
@@ -55,6 +56,7 @@ export async function updateProfile(formData: FormData): Promise<ProfileResult> 
   if (oldPath && oldUrl !== avatarUrl) await supabaseStorage.remove(AVATAR_BUCKET, [oldPath]).catch(() => undefined);
 
   revalidatePath("/learner/settings");
+  revalidatePath("/instructor/settings");
   return { ok: true, avatarUrl };
 }
 
@@ -69,7 +71,8 @@ export async function changePassword(input: { current: string; next: string; con
   } = await supabase.auth.getUser();
   if (!user || !user.email) return { ok: false, error: "Please log in again." };
 
-  const parsed = validatePasswordChange(input);
+  const settings = await getPlatformSettings(supabase);
+  const parsed = validatePasswordChange(input, settings.minPasswordLength);
   if (!parsed.ok) return { ok: false, error: "Please fix the highlighted fields.", fieldErrors: parsed.errors };
   if (!(await rateLimit("login", await clientIp(), `password-change:${user.email}`))) return { ok: false, error: RATE_LIMITED_MESSAGE };
 

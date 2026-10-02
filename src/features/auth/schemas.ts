@@ -1,23 +1,32 @@
 import { z } from "zod";
 
-const strongPassword = z
-  .string()
-  .min(8, "Password must be at least 8 characters")
-  .regex(/[A-Za-z]/, "Password must include a letter")
-  .regex(/[0-9]/, "Password must include a number");
+/** Complexity rules are fixed; the minimum length is configurable (T-143's platform_settings). */
+function strongPassword(minLength: number) {
+  return z
+    .string()
+    .min(minLength, `Password must be at least ${minLength} characters`)
+    .regex(/[A-Za-z]/, "Password must include a letter")
+    .regex(/[0-9]/, "Password must include a number");
+}
 
-export const signUpSchema = z
-  .object({
-    email: z.email("Enter a valid email address"),
-    password: strongPassword,
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
+export function buildSignUpSchema(minLength: number) {
+  return z
+    .object({
+      email: z.email("Enter a valid email address"),
+      password: strongPassword(minLength),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: "Passwords don't match",
+      path: ["confirmPassword"],
+    });
+}
 
-export type SignUpInput = z.infer<typeof signUpSchema>;
+export interface SignUpInput {
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
 
 export const loginSchema = z.object({
   email: z.email("Enter a valid email address"),
@@ -32,14 +41,19 @@ export const forgotPasswordSchema = z.object({
 
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
-export const resetPasswordSchema = z
-  .object({
-    password: strongPassword,
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
+export function buildResetPasswordSchema(minLength: number) {
+  return z
+    .object({
+      password: strongPassword(minLength),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: "Passwords don't match",
+      path: ["confirmPassword"],
+    });
+}
 
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export interface ResetPasswordInput {
+  password: string;
+  confirmPassword: string;
+}

@@ -1,5 +1,6 @@
 import { Paperclip } from "lucide-react";
 import { ResumableVideo } from "@/components/player/resumable-video";
+import { ScormPlayer } from "@/components/player/scorm-player";
 import type { PlayerLessonContent } from "@/features/player/data";
 import type { AssetLink } from "@/features/player/media";
 import { sanitizeLessonHtml } from "@/lib/sanitize";
@@ -14,12 +15,14 @@ export function LessonBody({
   videoSrc,
   savedPosition,
   onSavePosition,
+  onScormCommit,
   assets,
 }: {
   lesson: PlayerLessonContent;
   videoSrc: string | null;
   savedPosition: number;
   onSavePosition?: (seconds: number) => Promise<unknown>;
+  onScormCommit?: (cmi: Record<string, string>) => Promise<unknown>;
   assets: AssetLink[];
 }) {
   const safeHtml = sanitizeLessonHtml(lesson.content);
@@ -33,6 +36,15 @@ export function LessonBody({
       {lesson.type === "video" && !videoSrc && (
         <p className="rounded-card border border-dashed border-border bg-surface p-6 text-sm text-text-secondary">
           The video for this lesson is not available yet.
+        </p>
+      )}
+
+      {lesson.type === "scorm" && lesson.scormLaunchPath && lesson.scormToken && (
+        <ScormPlayer lessonId={lesson.id} token={lesson.scormToken} launchPath={lesson.scormLaunchPath} onCommit={onScormCommit} />
+      )}
+      {lesson.type === "scorm" && !(lesson.scormLaunchPath && lesson.scormToken) && (
+        <p className="rounded-card border border-dashed border-border bg-surface p-6 text-sm text-text-secondary">
+          The SCORM package for this lesson is not available yet.
         </p>
       )}
 

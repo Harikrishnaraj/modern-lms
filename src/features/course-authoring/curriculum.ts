@@ -1,11 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type LessonType = "video" | "text" | "quiz" | "assignment";
+export type LessonType = "video" | "text" | "quiz" | "assignment" | "scorm";
 export const LESSON_TYPES: readonly { value: LessonType; label: string }[] = [
   { value: "video", label: "Video lesson" },
   { value: "text", label: "Text lesson" },
   { value: "quiz", label: "Quiz" },
   { value: "assignment", label: "Assignment" },
+  { value: "scorm", label: "SCORM package" },
 ];
 
 export interface CurriculumLesson {

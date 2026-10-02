@@ -57,6 +57,8 @@ test.describe("assessment player", () => {
   test.afterAll(() => cleanup(svc, { courseIds, userIds }));
 
   test("take, autosave, fail, retry and pass with the key revealed only at the end", async ({ page }) => {
+    // Two full attempts with autosave waits and server-action refreshes: well over the 30s default.
+    test.setTimeout(120_000);
     // Entry from the quiz lesson.
     await page.goto(`/learner/courses/${tag}-c`);
     await page.getByRole("link", { name: `Open assessment: ${tag} Quiz` }).click();
@@ -114,11 +116,28 @@ test.describe("assessment player", () => {
     await expect(page.getByText("You have used all your attempts")).toBeVisible();
   });
 
-  test("the network responses never contain the answer key", async ({ page }) => {
-    // A fresh assessment page for an un-started, un-finished flow: inspect the HTML payload.
-    const html = await (await page.request.get(`/learner/courses/${tag}-c/assessments/${assessmentId}`)).text();
-    for (const secret of ["Because it is right.", "correct_option_ids", "accepted_answers", "is_correct"]) {
-      expect(html).not.toContain(secret);
+  test("the network responses never contain the answer key", async ({ browser }) => {
+    // A learner of their own who has not started: the shared learner may already have used every
+    // attempt in the test above (they run in parallel), and then the key is shown by design.
+    const fresh = await createUserWithRole(svc, `${tag}-new`, "learner");
+    userIds.push(fresh.id);
+    await svc.from("enrollments").insert({ user_id: fresh.id, course_id: course.courseId, version_id: course.versionId });
+    const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const page = await context.newPage();
+    try {
+      await page.goto("/login");
+      await page.getByLabel("Email").fill(fresh.email);
+      await page.getByLabel("Password").fill(fresh.password);
+      await page.getByRole("button", { name: "Log in" }).click();
+      await page.waitForURL("/learner");
+      // An un-started, un-finished flow: inspect the HTML payload.
+      const html = await (await page.request.get(`/learner/courses/${tag}-c/assessments/${assessmentId}`)).text();
+      expect(html).toContain(`${tag} Quiz`);
+      for (const secret of ["Because it is right.", "correct_option_ids", "accepted_answers", "is_correct"]) {
+        expect(html).not.toContain(secret);
+      }
+    } finally {
+      await context.close();
     }
   });
 

@@ -1,3 +1,4 @@
+import { captureError } from "@/services/error-tracking";
 import { createAdminClient } from "@/services/supabase/admin";
 
 /** Privileged actions that must leave a trail (SECURITY section 17). Add new ones here. */
@@ -16,10 +17,49 @@ export const AUDIT_ACTIONS = [
   "user.reinstated",
   "user.invited",
   "user.created",
+  "instructor.application_approved",
+  "instructor.application_rejected",
+  "role_permission_changed",
+  "category.created",
+  "category.updated",
+  "category.deleted",
+  "enrollment.manual_enroll",
+  "enrollment.manual_unenroll",
+  "enrollment.bulk_enroll",
   "certificate.revoked",
+  "assessment.attempt_reset",
+  "certificate.reissued",
+  "content.resource_deleted",
+  "content.scorm_package_deleted",
+  "moderation.content_hidden",
+  "moderation.content_restored",
+  "moderation.report_dismissed",
+  "integration.api_key_created",
+  "integration.api_key_revoked",
+  "integration.webhook_created",
+  "integration.webhook_deleted",
   "auth.login_failed",
   "settings.changed",
   "audit.exported",
+  "organization.created",
+  "organization.updated",
+  "organization.deleted",
+  "organization.member_added",
+  "organization.member_removed",
+  "organization.member_role_changed",
+  "organization.learning_assigned",
+  "organization.learning_unassigned",
+  "organization.report_exported",
+  "organization.sso_domain_added",
+  "organization.sso_domain_removed",
+  "organization.member_joined_via_sso",
+  "account.deletion_requested",
+  "account.deletion_cancelled",
+  "account.data_exported",
+  "communication.template_created",
+  "communication.template_updated",
+  "communication.template_deleted",
+  "communication.announcement_sent",
 ] as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
@@ -53,7 +93,7 @@ export async function recordAudit(entry: AuditEntry): Promise<boolean> {
     if (error) throw error;
     return true;
   } catch (err) {
-    console.error("audit write failed", entry.action, err);
+    void captureError("audit.write_failed", err, { action: entry.action });
     return false;
   }
 }

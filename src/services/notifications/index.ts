@@ -1,3 +1,4 @@
+import { captureError } from "@/services/error-tracking";
 import { createAdminClient } from "@/services/supabase/admin";
 import { isCategory, safeHref, type NotificationCategory } from "@/features/notifications/notifications";
 
@@ -35,7 +36,7 @@ export async function notify(input: NotifyInput): Promise<boolean> {
     if (error) throw error;
     return true;
   } catch (err) {
-    console.error("notify failed", input.category, err);
+    void captureError("notification.send_failed", err, { category: input.category });
     return false;
   }
 }

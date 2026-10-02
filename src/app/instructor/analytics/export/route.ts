@@ -5,6 +5,7 @@ import {
   parseCourseFilter,
 } from "@/features/instructor/analytics";
 import { createClient } from "@/lib/supabase/server";
+import { clientIp, rateLimit } from "@/services/rate-limit";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -14,6 +15,9 @@ export async function GET(request: NextRequest) {
 
   if (!user) {
     return new NextResponse("Unauthorized", { status: 401 });
+  }
+  if (!(await rateLimit("analytics-export", await clientIp(), user.id))) {
+    return new NextResponse("Too many exports. Please wait a while and try again.", { status: 429 });
   }
 
   const courseParam = request.nextUrl.searchParams.get("course");

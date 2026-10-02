@@ -9,16 +9,18 @@
  * Idempotent: anything that already exists (matched by slug / email) is left alone.
  * Nothing under src/ may import this file (enforced by tests/unit/seed-isolation.test.ts).
  *
- * Demo logins (dev only):  seed-instructor@example.com / seed-learner@example.com
+ * Demo logins (dev only):  seed-instructor@example.com / seed-learner@example.com / seed-admin@example.com / seed-superadmin@example.com
  * Password for both:       seed-password-1
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-for (const line of readFileSync(join(root, ".env.local"), "utf8").split("\n")) {
+// CI has no .env.local: the local Supabase stack's URL and keys arrive as environment variables.
+const envFile = join(root, ".env.local");
+for (const line of existsSync(envFile) ? readFileSync(envFile, "utf8").split("\n") : []) {
   const i = line.indexOf("=");
   if (i < 1 || line.trim().startsWith("#")) continue;
   const key = line.slice(0, i).trim();
@@ -287,6 +289,8 @@ async function main() {
     "Demo Instructor",
   );
   const learnerId = await ensureUser("seed-learner@example.com", "learner", "Demo Learner");
+  await ensureUser("seed-admin@example.com", "admin", "Demo Admin");
+  await ensureUser("seed-superadmin@example.com", "super_admin", "Demo Super Admin");
   await db
     .from("learner_onboarding")
     .upsert({
@@ -428,7 +432,7 @@ async function main() {
     `Seed complete: ${created} new course(s), ${COURSES.length} total; ${CATEGORIES.length} categories.`,
   );
   console.log(
-    "Logins: seed-instructor@example.com, seed-learner@example.com  (password: " + PASSWORD + ")",
+    "Logins: seed-instructor@example.com, seed-learner@example.com, seed-admin@example.com, seed-superadmin@example.com  (password: " + PASSWORD + ")",
   );
 }
 

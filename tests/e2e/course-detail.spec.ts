@@ -57,7 +57,8 @@ test.describe("course detail page (F-102)", () => {
     await expect(page.getByRole("heading", { level: 1, name: `${tag} Mastery` })).toBeVisible();
     await expect(page.getByText("Everything you need")).toBeVisible();
     await expect(page.getByText("Taught by Detail Teacher")).toBeVisible();
-    await expect(page.getByText("4.6")).toBeVisible();
+    // The header summary (the reviews section further down repeats the average).
+    await expect(page.getByText("4.6", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("(21 ratings)")).toBeVisible();
 
     await expect(page.getByRole("heading", { name: "What you will learn" })).toBeVisible();

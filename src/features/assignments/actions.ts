@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { SUBMISSION_BUCKET, supabaseStorage } from "@/services/storage";
 import { createAdminClient } from "@/services/supabase/admin";
+import { clientIp, rateLimit, RATE_LIMITED_MESSAGE } from "@/services/rate-limit";
 import { getMyAssignment } from "./queries";
 import { canSubmit, submitErrorMessage, validateSubmissionFile, validateTextAnswer } from "./rules";
 
@@ -24,6 +25,9 @@ export async function requestSubmissionUpload(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Please log in again." };
+  if (!(await rateLimit("upload-initiate", await clientIp(), user.id))) {
+    return { ok: false, error: RATE_LIMITED_MESSAGE };
+  }
   const assignment = await getMyAssignment(supabase, user.id, assignmentId);
   if (!assignment) return { ok: false, error: "This assignment is not available." };
   if (!canSubmit(assignment.status)) return { ok: false, error: submitErrorMessage(assignment.status === "graded" ? "graded" : "closed") };

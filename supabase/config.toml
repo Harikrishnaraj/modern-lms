@@ -1,0 +1,81 @@
+# Local Supabase stack (Supabase CLI + Docker). CI starts one per job so tests never share the hosted
+# project (T-251, ADR-034); developers can use it too with `npx supabase start`.
+# Settings the tests depend on mirror the hosted `modern-lms` project: email confirmation on,
+# TOTP MFA on, Google provider on, sign-ups open, anonymous sign-ins off.
+project_id = "modern-lms"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.seed]
+# Demo data comes from scripts/seed.mjs (ADR-023), run after the stack starts.
+enabled = false
+
+[realtime]
+# The app does not use Realtime.
+enabled = false
+
+[studio]
+enabled = false
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/**", "http://127.0.0.1:3000/**"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+minimum_password_length = 6
+
+[auth.rate_limit]
+# The E2E suite signs many users in from one IP; per-IP defaults would throttle it.
+email_sent = 1000
+sms_sent = 30
+anonymous_users = 30
+token_refresh = 1000
+sign_in_sign_ups = 1000
+token_verifications = 1000
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+# Hosted "Confirm email" is ON (mailer_autoconfirm false); sign-up tests rely on it.
+enable_confirmations = true
+secure_password_change = false
+max_frequency = "1s"
+
+[auth.mfa]
+max_enrolled_factors = 10
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.external.google]
+# T-165. CI only checks that sign-in starts the OAuth hop, so placeholder credentials suffice.
+enabled = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+skip_nonce_check = false
+
+[edge_runtime]
+enabled = false
+
+[analytics]
+enabled = false

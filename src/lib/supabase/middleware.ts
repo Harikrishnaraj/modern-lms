@@ -10,8 +10,16 @@ import { getSupabaseEnv } from "./env";
 // reuse it instead of creating a second one.
 export async function updateSession(
   request: NextRequest,
+  requestHeaders?: Headers,
 ): Promise<{ response: NextResponse; user: User | null; supabase: SupabaseClient }> {
-  let response = NextResponse.next({ request });
+  // `requestHeaders` (with the proxy's x-request-id) are forwarded to the app; cookie writes below
+  // land on `request.cookies`, so they are re-read into the forwarded headers each time.
+  const forward = () => {
+    if (!requestHeaders) return NextResponse.next({ request });
+    requestHeaders.set("cookie", request.headers.get("cookie") ?? "");
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  };
+  let response = forward();
   const { url, anonKey } = getSupabaseEnv();
 
   const supabase = createServerClient(url, anonKey, {
@@ -19,7 +27,7 @@ export async function updateSession(
       getAll: () => request.cookies.getAll(),
       setAll: (cookiesToSet) => {
         cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
+        response = forward();
         cookiesToSet.forEach(({ name, value, options }) => {
           response.cookies.set(name, value, options);
         });

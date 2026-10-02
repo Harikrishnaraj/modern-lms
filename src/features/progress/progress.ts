@@ -30,16 +30,14 @@ export interface MyProgress {
   courses: CourseProgress[];
 }
 
-/** The learner own progress, from real lesson completions (RPC is bound to the caller). */
-export async function getMyProgress(supabase: SupabaseClient): Promise<MyProgress> {
-  const { data, error } = await supabase.rpc("my_progress");
-  if (error || !data) throw new Error(`my_progress failed: ${error?.message}`);
-  const d = data as {
-    minutes: number | string;
-    lessons_completed: number | string;
-    active_days: string[];
-    courses: { course_id: string; slug: string; title: string; category: string | null; status: string; total_lessons: number; completed_lessons: number; minutes: number | string }[];
-  };
+interface ProgressPayload {
+  minutes: number | string;
+  lessons_completed: number | string;
+  active_days: string[];
+  courses: { course_id: string; slug: string; title: string; category: string | null; status: string; total_lessons: number; completed_lessons: number; minutes: number | string }[];
+}
+
+function parseProgress(d: ProgressPayload): MyProgress {
   return {
     minutes: Number(d.minutes),
     lessonsCompleted: Number(d.lessons_completed),
@@ -56,6 +54,20 @@ export async function getMyProgress(supabase: SupabaseClient): Promise<MyProgres
       percent: Number(c.total_lessons) === 0 ? 0 : Math.round((Number(c.completed_lessons) / Number(c.total_lessons)) * 100),
     })),
   };
+}
+
+/** The learner own progress, from real lesson completions (RPC is bound to the caller). */
+export async function getMyProgress(supabase: SupabaseClient): Promise<MyProgress> {
+  const { data, error } = await supabase.rpc("my_progress");
+  if (error || !data) throw new Error(`my_progress failed: ${error?.message}`);
+  return parseProgress(data as ProgressPayload);
+}
+
+/** An arbitrary user's progress (admin view; the RPC requires user.read_all). */
+export async function getUserProgress(supabase: SupabaseClient, userId: string): Promise<MyProgress> {
+  const { data, error } = await supabase.rpc("admin_user_progress", { p_user_id: userId });
+  if (error || !data) throw new Error(`admin_user_progress failed: ${error?.message}`);
+  return parseProgress(data as ProgressPayload);
 }
 
 // ---------------------------------------------------------------- pure logic

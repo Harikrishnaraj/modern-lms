@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { validateReason } from "@/features/discussions/discussions";
 import { createClient } from "@/lib/supabase/server";
+import { RATE_LIMITED_MESSAGE, clientIp, rateLimit } from "@/services/rate-limit";
 import { notify } from "@/services/notifications";
 import { validateReview } from "./reviews";
 
@@ -60,5 +62,26 @@ export async function deleteReview(courseId: string): Promise<ReviewResult> {
   if (error || !data?.length) return { ok: false, error: "You have no review to delete." };
   const { data: course } = await supabase.from("courses").select("slug").eq("id", courseId).maybeSingle();
   if (course) revalidatePath(`/courses/${course.slug as string}`);
+  return { ok: true };
+}
+
+export type ReportReviewResult = { ok: true } | { ok: false; error: string };
+
+/** Flags a review for moderator attention (F-411). Cannot report your own review. */
+export async function reportReviewAction(reviewId: string, reason: string): Promise<ReportReviewResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Please log in again." };
+  if (!UUID.test(reviewId)) return { ok: false, error: "That review is not available." };
+  const parsed = validateReason(reason);
+  if (!parsed.ok) return parsed;
+  if (!(await rateLimit("review-report", await clientIp(), user.id))) return { ok: false, error: RATE_LIMITED_MESSAGE };
+
+  const { error } = await supabase.rpc("report_review", { p_review_id: reviewId, p_reason: parsed.reason });
+  if (error) {
+    return { ok: false, error: error.message.includes("your own") ? "You cannot report your own review." : "We could not submit that report." };
+  }
   return { ok: true };
 }

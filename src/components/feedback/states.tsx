@@ -10,6 +10,8 @@ interface StateProps {
   action?: ReactNode;
   icon?: LucideIcon;
   className?: string;
+  /** Error reference shown to the user (the Next.js error digest); it is logged with the request ID (T-242). */
+  reference?: string;
 }
 
 function StateFrame({
@@ -20,6 +22,7 @@ function StateFrame({
   tone,
   role,
   className,
+  reference,
 }: StateProps & { icon: LucideIcon; tone: string; role?: "alert" | "status" }) {
   return (
     <div
@@ -35,6 +38,11 @@ function StateFrame({
       <h2 className="text-base font-semibold text-text">{title}</h2>
       {description && <p className="mt-1.5 max-w-md text-sm text-text-secondary">{description}</p>}
       {action && <div className="mt-5">{action}</div>}
+      {reference && (
+        <p className="mt-4 text-xs text-text-secondary">
+          Reference: <span className="font-mono select-all">{reference}</span>
+        </p>
+      )}
     </div>
   );
 }

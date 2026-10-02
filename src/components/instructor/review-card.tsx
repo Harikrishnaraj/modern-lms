@@ -213,7 +213,7 @@ export function ReviewCard({ review }: { review: InstructorReview }) {
             <div className="flex items-center gap-2">
               <Button
                 type="button"
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 disabled={isPending}
                 onClick={() => {
@@ -237,7 +237,7 @@ export function ReviewCard({ review }: { review: InstructorReview }) {
         <div className="mt-3.5 flex justify-end">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             size="sm"
             onClick={() => {
               setReplyText("");

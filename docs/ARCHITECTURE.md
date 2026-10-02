@@ -19,7 +19,7 @@ Recommended stack:
 - Email: transactional email provider behind a service interface
 - E2E: Playwright
 - Unit/integration: Vitest where useful
-- Deployment: Vercel or equivalent Next.js-compatible platform
+- Deployment: Ubuntu VPS with Docker: Next.js standalone server behind Caddy (automatic HTTPS), deployed from GitHub Actions over SSH after CI passes (ADR-036, `docs/DEPLOY.md`)
 - Version control: Git + GitHub
 
 This follows the supplied Vibe Coding guide's recommended beginner-to-production direction: Next.js, TypeScript, Tailwind CSS, PostgreSQL/Supabase, Supabase Auth, Git/GitHub, Playwright and Vercel.

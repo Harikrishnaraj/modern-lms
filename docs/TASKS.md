@@ -108,40 +108,41 @@ if a task must split, keep its ID on the first part and add new IDs (e.g. T-036a
 - [x] **T-106** Messaging: 1:1 threads with learners, unread counts. — F-215
 - [x] **T-107** Analytics overview: enrollments, completion rate, active learners, revenue KPIs, date + course filters. — F-216
 - [x] **T-108** Learner, video (watch time, replay, drop-off by lesson) and assessment analytics (pass rate, avg attempts, question difficulty) + CSV export scoped to own courses. — F-216
-- [ ] **T-109** Reviews: ratings list, distribution, reply to review. — F-217
-- [ ] **T-110** Certificates: issued for my courses, certificate template settings. — F-218
-- [ ] **T-111** Resource Library: reusable media/documents with usage. — F-219
-- [ ] **T-112** Instructor Settings: public profile, payout details (via provider), notifications. — F-220
-- [ ] **T-113** E2E: instructor extended (TEST_PLAN §11, §12). — F-206…F-220
+- [x] **T-109** Reviews: ratings list, distribution, reply to review. — F-217
+- [x] **T-110** Certificates: issued for my courses, certificate template settings. — F-218
+- [x] **T-111** Resource Library: reusable media/documents with usage. — F-219
+- [x] **T-112** Instructor Settings: public profile, payout details (via provider), notifications. — F-220
+- [x] **T-113** E2E: instructor extended (TEST_PLAN §11, §12). — F-206…F-220
+- [x] **T-114** Assignments page: create across courses (rich-text description, allowed file types, reference files up to 50MB), add to live courses (ADR-030), all-course table with status, submissions/enrolled, search and actions. — F-206
 
 ## Phase 7 — Admin complete
 
-- [ ] **T-130** User Detail: account, roles, progress by course, skills, sessions & devices, login history, actions. — F-402
-- [ ] **T-131** Instructors: list, verification queue (approve/reject applications), top instructors. — F-403
-- [ ] **T-132** Instructor Detail: courses, revenue, rating distribution, payouts. — F-403
-- [ ] **T-133** Roles & Permissions matrix editor (audited; cannot remove last Super Admin). — F-404
-- [ ] **T-134** Categories management. — F-405
-- [ ] **T-135** Enrollments & cohorts: search, manual enroll/unenroll, cohort create, bulk assign. — F-407
-- [ ] **T-136** Assessments: averages, question-quality flags, attempt investigation/reset. — F-408
-- [ ] **T-137** Certificates: search, revoke (audited), reissue. — F-409
-- [ ] **T-138** Content: media, documents, SCORM package upload + launch (validated). — F-410
-- [ ] **T-139** Moderation: reported posts/reviews queue, hide/restore, ban. — F-411
-- [ ] **T-140** Analytics: platform dashboards, saved reports, scheduled export. — F-412
-- [ ] **T-141** Communication: announcements (targeted), email templates, delivery log. — F-413
-- [ ] **T-142** Integrations & API: API keys (hashed, scoped), webhooks, rate limits, request log. — F-415
-- [ ] **T-143** Settings & Security: platform settings, password/MFA policy, session policy, security events. — F-416
-- [ ] **T-144** Admin profile: personal info, security, notification preferences, my recent actions. — F-417
-- [ ] **T-145** E2E: admin extended. — F-402…F-417
+- [x] **T-130** User Detail: account, roles, progress by course, skills, sessions & devices, login history, actions. — F-402
+- [x] **T-131** Instructors: list, verification queue (approve/reject applications), top instructors. — F-403
+- [x] **T-132** Instructor Detail: courses, revenue, rating distribution, payouts. — F-403
+- [x] **T-133** Roles & Permissions matrix editor (audited; cannot remove last Super Admin). — F-404
+- [x] **T-134** Categories management. — F-405
+- [x] **T-135** Enrollments & cohorts: search, manual enroll/unenroll, cohort create, bulk assign. — F-407
+- [x] **T-136** Assessments: averages, question-quality flags, attempt investigation/reset. — F-408
+- [x] **T-137** Certificates: search, revoke (audited), reissue. — F-409
+- [x] **T-138** Content: media, documents, SCORM package upload + launch (validated). — F-410
+- [x] **T-139** Moderation: reported posts/reviews queue, hide/restore, ban. — F-411
+- [x] **T-140** Analytics: platform dashboards, saved reports, scheduled export. — F-412
+- [x] **T-141** Communication: announcements (targeted), email templates, delivery log. — F-413
+- [x] **T-142** Integrations & API: API keys (hashed, scoped), webhooks, rate limits, request log. — F-415
+- [x] **T-143** Settings & Security: platform settings, password/MFA policy, session policy, security events. — F-416
+- [x] **T-144** Admin profile: personal info, security, notification preferences, my recent actions. — F-417
+- [x] **T-145** E2E: admin extended. — F-402…F-417
 
 ## Phase 8 — Organizations / enterprise
 
-- [ ] **T-160** `organizations`, `departments`, `teams`, `organization_members` + RLS isolation tests. — F-500
-- [ ] **T-161** Admin Organizations screen: create, members, learning hours. — F-500
-- [ ] **T-162** Org Admin scoped portal access (own org only). — F-501
-- [ ] **T-163** Assigned courses/paths + required completion + due dates. — F-502
-- [ ] **T-164** Organization reports (completion, overdue, hours) + export. — F-503
-- [ ] **T-165** Organization SSO (SAML/OIDC via Supabase). — F-504
-- [ ] **T-166** E2E: org isolation (TEST_PLAN §4, §13). — F-500…F-504
+- [x] **T-160** `organizations`, `departments`, `teams`, `organization_members` + RLS isolation tests. — F-500
+- [x] **T-161** Admin Organizations screen: create, members, learning hours. — F-500
+- [x] **T-162** Org Admin scoped portal access (own org only). — F-501
+- [x] **T-163** Assigned courses/paths + required completion + due dates. — F-502
+- [x] **T-164** Organization reports (completion, overdue, hours) + export. — F-503
+- [x] **T-165** Organization SSO (SAML/OIDC via Supabase). — F-504
+- [x] **T-166** E2E: org isolation (TEST_PLAN §4, §13). — F-500…F-504
 
 ## Phase 9 — Commerce
 
@@ -175,14 +176,15 @@ if a task must split, keep its ID on the first part and add new IDs (e.g. T-036a
 
 ## Phase 12 — Production hardening & launch
 
-- [ ] **T-240** Security headers + CSP (SECURITY §22). — F-940
-- [ ] **T-241** Rate limiting for public/AI/upload/assessment endpoints. — F-941
-- [ ] **T-242** Structured logging + correlation IDs + error tracking. — F-942
-- [ ] **T-243** Privacy: data export, account deletion workflow, retention jobs. — F-943
-- [ ] **T-244** Accessibility audit (WCAG 2.2 AA) + fixes. — F-944
-- [ ] **T-245** Responsive audit at 375 / 768 / 1024 / 1440 for every screen. — F-945
-- [ ] **T-246** Performance pass (bundle size, LCP, query counts, lazy chart/editor loading). — F-946
-- [ ] **T-247** Upgrade to Next.js 16 / ESLint 10 when stable for this stack. — F-900
-- [ ] **T-248** CI (GitHub Actions: check + E2E) + Vercel preview deployments. — F-947
-- [ ] **T-249** Backups + tested restore runbook. — F-948
-- [ ] **T-250** Production deploy + full production QA checklist (TEST_PLAN §23). — F-947
+- [x] **T-240** Security headers + CSP (SECURITY §22). — F-940
+- [x] **T-241** Rate limiting for public/AI/upload/assessment endpoints. — F-941
+- [x] **T-242** Structured logging + correlation IDs + error tracking. — F-942
+- [x] **T-243** Privacy: data export, account deletion workflow, retention jobs. — F-943
+- [x] **T-244** Accessibility audit (WCAG 2.2 AA) + fixes. — F-944
+- [x] **T-245** Responsive audit at 375 / 768 / 1024 / 1440 for every screen. — F-945
+- [x] **T-246** Performance pass (bundle size, LCP, query counts, lazy chart/editor loading). — F-946
+- [x] **T-247** Upgrade to Next.js 16 / ESLint 10 when stable for this stack. — F-900
+- [~] **T-248** CI (GitHub Actions: check + E2E) + preview deployments per PR on the VPS (ADR-036; CI done, previews to do). — F-947
+- [x] **T-249** Backups + tested restore runbook. — F-948
+- [ ] **T-250** Production deploy on the VPS (ADR-036, `docs/DEPLOY.md`) + full production QA checklist (TEST_PLAN §23). — F-947
+- [x] **T-251** Fix the failing E2E specs found by the first full live run (accessibility, admin analytics/certificates/content/instructor-detail/integrations/moderation/profile, admin journey) and make the suite reliable in CI by running it against a local Supabase stack per job (ADR-034, user decision 2026-10-02), so CI E2E is green. — F-947

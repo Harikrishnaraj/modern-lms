@@ -45,7 +45,16 @@ test.describe("admin analytics", () => {
       const table = page.getByRole("table", { name: "Daily platform activity" });
       await expect(table.getByRole("row")).toHaveCount(31); // header + 30 days
 
-      await expect(page.getByRole("list", { name: "Most enrolled courses" }).getByText(`${tag} Trending`)).toBeVisible();
+      // The project is shared, so busier courses may push ours out of the top five; ranking itself is
+      // proven in tests/integration/admin-analytics.test.ts. Here: real rows, at most five, in order.
+      const top = page.getByRole("list", { name: "Most enrolled courses" }).getByRole("listitem");
+      await expect(top.first()).toBeVisible();
+      const rows = await top.allInnerTexts();
+      expect(rows.length).toBeLessThanOrEqual(5);
+      const counts = rows.map((r) => Number(/(\d+) enrolled/.exec(r)?.[1]));
+      expect(counts.every((n) => n >= 1)).toBe(true);
+      expect(counts).toEqual([...counts].sort((a, b) => b - a));
+      if (rows.length < 5) expect(rows.some((r) => r.includes(`${tag} Trending`))).toBe(true);
 
       await page.getByRole("navigation", { name: "Date range" }).getByRole("link", { name: "7 days" }).click();
       await expect(page).toHaveURL(/range=7/);

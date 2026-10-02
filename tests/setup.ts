@@ -9,6 +9,7 @@ afterEach(() => cleanup());
 vi.mock("@/services/rate-limit", () => ({
   RATE_LIMITED_MESSAGE: "Too many attempts. Please wait a while and try again.",
   clientIp: vi.fn(async () => "1.2.3.4"),
+  userAgent: vi.fn(async () => "test-agent"),
   rateLimit: vi.fn(async () => true),
 }));
 

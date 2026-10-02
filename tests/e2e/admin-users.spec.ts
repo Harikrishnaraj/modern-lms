@@ -106,7 +106,8 @@ test.describe("admin user management", () => {
       await invite.getByLabel("Email").fill(`${tag}-invitee@example.com`);
       await invite.getByRole("button", { name: "Create invitation" }).click();
       await expect(page.getByText(`Invitation created for ${tag}-invitee@example.com`)).toBeVisible();
-      await expect(page.locator("code")).toContainText("https://");
+      // An absolute link to Supabase Auth's verify endpoint (https on the hosted project, http locally).
+      await expect(page.locator("code")).toContainText("/auth/v1/verify?token=");
     } finally {
       await done();
     }

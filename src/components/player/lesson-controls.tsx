@@ -12,10 +12,13 @@ export function LessonControls({
   completed,
   nextHref,
   onComplete,
+  automatic = false,
 }: {
   completed: boolean;
   nextHref: string | null;
   onComplete: () => Promise<CompleteResult>;
+  /** SCORM: only the package's own passed/completed report completes the lesson. */
+  automatic?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -48,6 +51,10 @@ export function LessonControls({
         Lesson completed
       </p>
     );
+  }
+
+  if (automatic) {
+    return <p className="text-sm text-text-secondary">This lesson is marked complete when you finish the course content above.</p>;
   }
 
   async function handleClick() {

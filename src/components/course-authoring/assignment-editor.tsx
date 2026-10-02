@@ -5,8 +5,19 @@ import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createAssignment, deleteAssignment, saveAssignment } from "@/features/course-authoring/assignment-actions";
+import { FileTypePicker } from "@/components/assignments/file-type-picker";
+import { ReferenceFilesField, type ListedFile } from "@/components/assignments/reference-files-field";
+import { discardAssignmentResourceUpload } from "@/features/assignments/hub-actions";
+import { instructionsToHtml } from "@/features/assignments/hub-rules";
+import {
+  addAssignmentResource,
+  createAssignment,
+  deleteAssignment,
+  removeAssignmentResource,
+  saveAssignment,
+} from "@/features/course-authoring/assignment-actions";
 import { MAX_CRITERIA, type AssignmentInput } from "@/features/course-authoring/assignment-rules";
+import { RichTextEditor } from "./rich-text-editor";
 
 export function NewAssignmentForm({ courseId, disabled }: { courseId: string; disabled: boolean }) {
   const router = useRouter();
@@ -43,12 +54,14 @@ export function AssignmentEditor({
   courseId,
   assignmentId,
   initial,
+  resources,
   submissions,
   disabled,
 }: {
   courseId: string;
   assignmentId: string;
   initial: AssignmentInput;
+  resources: ListedFile[];
   submissions: number;
   disabled: boolean;
 }) {
@@ -110,11 +123,18 @@ export function AssignmentEditor({
       )}
       <fieldset disabled={disabled || busy} className="space-y-5">
         <Input label="Title" value={v.title} onChange={(e) => set("title", e.target.value)} maxLength={200} error={errors.title} />
-        <label className="flex flex-col gap-1.5 text-sm font-medium">
-          Instructions
-          <textarea value={v.instructions} onChange={(e) => set("instructions", e.target.value)} rows={6} maxLength={20000} className="rounded-input border border-border bg-surface px-3 py-2 text-sm font-normal" />
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium">Instructions</span>
+          <RichTextEditor
+            initialHtml={instructionsToHtml(initial.instructions)}
+            onChange={(html) => set("instructions", html)}
+            disabled={disabled || busy}
+            label="Instructions"
+            tools={["bold", "italic", "underline", "ul", "ol", "link"]}
+            minHeight="min-h-32"
+          />
           {err("instructions")}
-        </label>
+        </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
             <Input label="Deadline (UTC)" type="datetime-local" value={v.dueAt} onChange={(e) => set("dueAt", e.target.value)} error={errors.dueAt} hint="Leave empty for no deadline." />
@@ -137,6 +157,36 @@ export function AssignmentEditor({
           </label>
           {err("allowText")}
         </div>
+        {v.allowFile && (
+          <div className="max-w-xs">
+            <FileTypePicker label="Allowed file types" value={v.allowedFileTypes} onChange={(next) => set("allowedFileTypes", next)} disabled={disabled || busy} error={errors.allowedFileTypes} />
+          </div>
+        )}
+
+        <section aria-labelledby="resources-heading" className="space-y-2">
+          <h2 id="resources-heading" className="text-base font-semibold">
+            Reference files
+          </h2>
+          <p className="text-sm text-text-secondary">Optional files learners can download with the instructions.</p>
+          <ReferenceFilesField
+            files={resources}
+            disabled={disabled || busy}
+            onUploaded={async (file) => {
+              const r = await addAssignmentResource(courseId, assignmentId, file);
+              if (!r.ok) {
+                await discardAssignmentResourceUpload(file.path);
+                return r.error;
+              }
+              router.refresh();
+              return null;
+            }}
+            onRemove={async (key) => {
+              const r = await removeAssignmentResource(courseId, assignmentId, key);
+              if (!r.ok) setNotice({ tone: "error", text: r.error });
+              else router.refresh();
+            }}
+          />
+        </section>
 
         <section aria-labelledby="rubric-heading" className="space-y-3">
           <h2 id="rubric-heading" className="text-base font-semibold">

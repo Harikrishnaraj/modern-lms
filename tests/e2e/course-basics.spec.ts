@@ -76,8 +76,10 @@ test.describe("course basics (create + edit)", () => {
 
     // It is listed under Drafts (resumable from My Courses).
     await page.goto("/instructor/courses?status=draft");
+    // My Courses opens the course overview (F-201); Basics is one step from there.
     await page.getByRole("link", { name: `${tag} My First Course` }).first().click();
-    await expect(page).toHaveURL(new RegExp(`/instructor/courses/${courseId}/basics`));
+    await expect(page).toHaveURL(new RegExp(`/instructor/courses/${courseId}$`));
+    await page.goto(`/instructor/courses/${courseId}/basics`);
 
     // Edit and save; persists after a reload.
     await page.waitForLoadState("networkidle");

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { assignmentStatus, type AssignmentRules, type AssignmentStatus } from "./rules";
+import { assignmentStatus, isFileTypeKey, LEGACY_FILE_TYPES, type AssignmentRules, type AssignmentStatus } from "./rules";
 
 export interface LearnerAssignment extends AssignmentRules {
   id: string;
@@ -35,11 +35,12 @@ interface Row {
   allow_text: boolean;
   allow_file: boolean;
   max_file_mb: number;
+  allowed_file_types: string[] | null;
   course_versions: { title: string; courses: { slug: string } | { slug: string }[] } | { title: string; courses: { slug: string } | { slug: string }[] }[];
 }
 
 const SELECT =
-  "id, title, instructions, due_at, max_points, allow_late, allow_text, allow_file, max_file_mb, " +
+  "id, title, instructions, due_at, max_points, allow_late, allow_text, allow_file, max_file_mb, allowed_file_types, " +
   "course_versions!inner(title, courses!course_versions_course_id_fkey(slug))";
 
 const one = <T>(v: T | T[]): T => (Array.isArray(v) ? v[0] : v);
@@ -66,6 +67,7 @@ function build(row: Row, sub: Record<string, unknown> | undefined, now: Date): L
     allowText: row.allow_text,
     allowFile: row.allow_file,
     maxFileMb: row.max_file_mb,
+    allowedFileTypes: (row.allowed_file_types ?? [...LEGACY_FILE_TYPES]).filter(isFileTypeKey),
   };
   return {
     ...rules,

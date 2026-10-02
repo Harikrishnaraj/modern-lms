@@ -1,3 +1,4 @@
+import { log } from "@/lib/log";
 import { createClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 
@@ -12,7 +13,11 @@ const LIMITS = {
   "certificate-verify": { limit: 10, windowSeconds: 10 * 60 },
   "discussion-post": { limit: 20, windowSeconds: 10 * 60 },
   "discussion-react": { limit: 60, windowSeconds: 10 * 60 },
+  "review-report": { limit: 20, windowSeconds: 10 * 60 },
+  "api-request": { limit: 300, windowSeconds: 10 * 60 },
   "instructor-message": { limit: 20, windowSeconds: 10 * 60 },
+  "upload-initiate": { limit: 30, windowSeconds: 10 * 60 },
+  "analytics-export": { limit: 20, windowSeconds: 10 * 60 },
 } as const;
 
 export type RateLimitedAction = keyof typeof LIMITS;
@@ -22,6 +27,11 @@ export const RATE_LIMITED_MESSAGE = "Too many attempts. Please wait a while and 
 export async function clientIp(): Promise<string> {
   const h = await headers();
   return h.get("x-forwarded-for")?.split(",")[0].trim() || h.get("x-real-ip") || "unknown";
+}
+
+export async function userAgent(): Promise<string | null> {
+  const h = await headers();
+  return h.get("user-agent");
 }
 
 // Shared NATs/offices sit behind one IP, so the per-IP bucket is looser than
@@ -40,7 +50,7 @@ export async function rateLimit(
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
-    console.error("rateLimit: SUPABASE_SERVICE_ROLE_KEY not configured; limiting disabled");
+    log.error("rate_limit.not_configured", { detail: "service role key missing; limiting disabled" });
     return true;
   }
   const db = createClient(url, key, { auth: { persistSession: false } });
@@ -56,7 +66,7 @@ export async function rateLimit(
       p_window_seconds: windowSeconds,
     });
     if (error) {
-      console.error("rateLimit: check failed", error.message);
+      log.error("rate_limit.check_failed", { message: error.message });
       return true;
     }
     if (data === false) return false;

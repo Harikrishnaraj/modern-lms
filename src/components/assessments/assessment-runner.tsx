@@ -138,13 +138,15 @@ export function AssessmentRunner({
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [remaining, setRemaining] = useState<number | null>(
+  const [remaining, setRemaining] = useState<number | null>(() =>
     expiresAt ? new Date(expiresAt).getTime() - Date.now() : null,
   );
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const submittedRef = useRef(false);
   const latest = useRef(answers);
-  latest.current = answers;
+  useEffect(() => {
+    latest.current = answers;
+  }, [answers]);
   const firstRender = useRef(true);
 
   async function submit() {

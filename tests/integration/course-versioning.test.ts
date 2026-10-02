@@ -211,4 +211,55 @@ describe.skipIf(!hasLiveProject)("course versioning (T-102, live Supabase)", () 
     await svc.from("course_versions").update({ status: "archived" }).eq("course_id", c.courseId).eq("version_number", 3);
     expect(await startNewVersion(c.courseId)).toEqual({ ok: true, versionNumber: 4 });
   });
+
+  it("copies a SCORM lesson's package into the new draft, sharing (not duplicating) storage, and survives deleting the old version's copy", async () => {
+    const scormOwner = await user("sco", "instructor");
+    const admin = await user("adm", "admin");
+    const scormCourse = await createCourse(svc, scormOwner.id, { slug: `${tag}-scorm`, title: `${tag} SCORM Course`, publish: true });
+    courseIds.push(scormCourse.courseId);
+
+    const { data: section } = await svc.from("course_sections").insert({ version_id: scormCourse.versionId, title: "S" }).select("id").single();
+    const { data: lesson } = await svc.from("lessons").insert({ section_id: section!.id, title: "SCORM lesson", type: "scorm" }).select("id").single();
+    const { data: pkg } = await svc
+      .from("scorm_packages")
+      .insert({
+        lesson_id: lesson!.id,
+        version: "1.2",
+        title: "Package",
+        launch_path: "index.html",
+        storage_prefix: `${tag}/scorm/${lesson!.id}`,
+        file_paths: ["index.html", "driver.js"],
+        file_count: 2,
+        total_bytes: 100,
+      })
+      .select("id, storage_prefix, file_paths")
+      .single();
+
+    as(scormOwner);
+    expect(await startNewVersion(scormCourse.courseId)).toEqual({ ok: true, versionNumber: 2 });
+    const v2 = (await svc.from("course_versions").select("id").eq("course_id", scormCourse.courseId).eq("version_number", 2).single()).data!.id as string;
+    // The course has two sections in v2 (the fixture's default "Intro" section plus this test's own "S"
+    // section), so the SCORM lesson's copy must be found by its distinguishing title, not just version_id.
+    const v2Section = (await svc.from("course_sections").select("id").eq("version_id", v2).eq("title", "S").single()).data!;
+    const v2Lesson = (await svc.from("lessons").select("id").eq("section_id", v2Section.id as string).single()).data!;
+    const v2Pkg = (await svc.from("scorm_packages").select("*").eq("lesson_id", v2Lesson.id as string).single()).data!;
+    expect(v2Pkg).toMatchObject({
+      storage_prefix: pkg!.storage_prefix,
+      file_paths: pkg!.file_paths,
+      launch_path: "index.html",
+      version: "1.2",
+    });
+    expect(v2Pkg.id).not.toBe(pkg!.id);
+
+    // Deleting the OLD version's package row must not report the shared storage as safe to remove,
+    // since the NEW version's package still points at the same storage_prefix.
+    const del = await admin.client.rpc("admin_delete_scorm_package", { p_package_id: pkg!.id });
+    expect(del.error).toBeNull();
+    expect(del.data[0]).toEqual({ storage_prefix: pkg!.storage_prefix, file_paths: [] });
+    expect((await svc.from("scorm_packages").select("id").eq("id", v2Pkg.id as string).maybeSingle()).data).not.toBeNull();
+
+    // Now delete the last remaining copy: storage really is safe to remove this time.
+    const del2 = await admin.client.rpc("admin_delete_scorm_package", { p_package_id: v2Pkg.id as string });
+    expect(del2.data[0]).toEqual({ storage_prefix: pkg!.storage_prefix, file_paths: pkg!.file_paths });
+  });
 });

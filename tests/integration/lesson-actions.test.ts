@@ -10,6 +10,7 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 import { deleteAsset, registerAsset, requestUpload, saveLesson } from "@/features/course-authoring/lesson-actions";
 import { getLessonForEditing } from "@/features/course-authoring/lessons";
 import { getAssetLinks, resolveVideoSrc } from "@/features/player/media";
+import { rateLimit } from "@/services/rate-limit";
 
 const hasLiveProject = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -159,6 +160,15 @@ describe.skipIf(!hasLiveProject)("lesson editor actions (T-053, live Supabase)",
         expect(ok.path.startsWith(`${course.courseId}/${videoLesson}/`)).toBe(true);
         expect(ok.ref).toBe(`storage://course-videos/${ok.path}`);
       }
+    });
+
+    it("rejects requesting an upload ticket while rate-limited (T-241, SECURITY §18)", async () => {
+      currentClient = owner.client;
+      vi.mocked(rateLimit).mockResolvedValueOnce(false);
+      expect(await requestUpload(course.courseId, textLesson, "asset", { name: "a.pdf", size: 10, type: "application/pdf" })).toEqual({
+        ok: false,
+        error: "Too many attempts. Please wait a while and try again.",
+      });
     });
 
     it("refuses tickets to non-owners", async () => {

@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.github
+.claude
+.env*
+!.env.example
+test-results
+playwright-report
+coverage
+dist
+tests/e2e/.auth
+supabase/.temp
+deploy
+*.log

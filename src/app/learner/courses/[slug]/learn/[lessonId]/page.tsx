@@ -8,7 +8,7 @@ import { PlayerSidebar } from "@/components/player/player-sidebar";
 import { Progress } from "@/components/ui/progress";
 import { buttonClasses } from "@/components/ui/button";
 import { getLessonContent, getLessonProgress, getPlayerCourse } from "@/features/player/data";
-import { completeLesson, saveVideoPosition } from "@/features/player/progress";
+import { completeLesson, saveVideoPosition, submitScormCommit } from "@/features/player/progress";
 import { progressPercent } from "@/features/my-learning/queries";
 import { adjacentLessons, isLessonLocked } from "@/features/player/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -100,6 +100,7 @@ export default async function LessonPage({
             videoSrc={videoSrc}
             savedPosition={lessonProgress.positionSeconds}
             onSavePosition={course.enrolled ? saveVideoPosition.bind(null, slug, lessonId) : undefined}
+            onScormCommit={course.enrolled ? submitScormCommit.bind(null, slug, lessonId) : undefined}
             assets={assets}
           />
 
@@ -117,6 +118,7 @@ export default async function LessonPage({
               completed={lessonProgress.completed}
               nextHref={next ? lessonHref(next.id) : null}
               onComplete={completeLesson.bind(null, slug, lessonId)}
+              automatic={lesson.type === "scorm"}
             />
           )}
 

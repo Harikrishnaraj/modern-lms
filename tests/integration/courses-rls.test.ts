@@ -11,7 +11,7 @@ describe.skipIf(!hasLiveProject)("courses schema RLS (T-030, live Supabase)", ()
   const noPersist = { auth: { persistSession: false, autoRefreshToken: false } };
   const anon = () => createClient(url!, anonKey!, noPersist);
   const password = "correct horse battery staple 1";
-  const svc = createClient(url!, serviceRoleKey!, noPersist);
+  const svc = hasLiveProject ? createClient(url!, serviceRoleKey!, noPersist) : (null as never);
   const tag = `t030-${Date.now()}`;
   const courseIds: string[] = [];
 

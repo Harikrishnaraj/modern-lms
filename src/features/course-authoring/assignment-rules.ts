@@ -1,5 +1,7 @@
 // Pure rules for the assignment builder and grading (F-206).
 
+import { FILE_TYPE_KEYS, isFileTypeKey, type FileTypeKey } from "@/features/assignments/rules";
+
 export const MAX_CRITERIA = 10;
 
 export interface CriterionInput {
@@ -18,6 +20,8 @@ export interface AssignmentInput {
   allowText: boolean;
   allowFile: boolean;
   maxFileMb: number;
+  /** File types learners may upload (keys of FILE_TYPES). */
+  allowedFileTypes: string[];
   criteria: CriterionInput[];
 }
 
@@ -30,6 +34,7 @@ export interface AssignmentValue {
   allowText: boolean;
   allowFile: boolean;
   maxFileMb: number;
+  allowedFileTypes: FileTypeKey[];
   criteria: CriterionInput[];
 }
 
@@ -68,6 +73,9 @@ export function validateAssignment(
   const fileMb = Number(input.maxFileMb);
   if (!Number.isInteger(fileMb) || fileMb < 1 || fileMb > 10) errors.maxFileMb = "The file limit is a whole number of MB from 1 to 10.";
   if (!input.allowText && !input.allowFile) errors.allowText = "Learners must be able to submit text, a file, or both.";
+  const types = Array.isArray(input.allowedFileTypes) ? input.allowedFileTypes : [];
+  const allowedFileTypes = FILE_TYPE_KEYS.filter((k) => types.includes(k));
+  if (allowedFileTypes.length === 0 || !types.every(isFileTypeKey)) errors.allowedFileTypes = "Choose at least one file type learners may submit.";
 
   const criteria: CriterionInput[] = [];
   if (input.criteria.length > MAX_CRITERIA) errors.criteria = `Use at most ${MAX_CRITERIA} rubric criteria.`;
@@ -96,6 +104,7 @@ export function validateAssignment(
       allowText: input.allowText,
       allowFile: input.allowFile,
       maxFileMb: fileMb,
+      allowedFileTypes,
       criteria,
     },
   };

@@ -11,9 +11,12 @@
   --color-surface: #ffffff;
   --color-text: #0f172a;
   --color-text-secondary: #64748b;
-  --color-text-muted: #94a3b8;
+  /* Muted text must still meet WCAG AA: 4.76:1 on surface, 4.55:1 on background (#94a3b8 was 2.56:1). */
+  --color-text-muted: #64748b;
   --color-border: #e2e8f0;
   --color-border-subtle: #f1f5f9;
+  /* Neutral badge text: 7:1 on border-subtle (text-secondary there is only 4.3:1, below WCAG AA). */
+  --color-neutral-text: #475569;
 
   /* Brand */
   --color-primary: #4f46e5;
@@ -42,7 +45,7 @@
   --color-sidebar-dark: #0f172a;
   --color-sidebar-dark-border: #1e293b;
   --color-sidebar-dark-text: #cbd5e1;
-  --color-sidebar-dark-muted: #64748b;
+  --color-sidebar-dark-muted: #94a3b8; /* 6.9:1 on sidebar-dark (WCAG AA) */
 
   /* Typography */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;

@@ -9,6 +9,14 @@ export interface LessonAsset {
   sizeBytes: number | null;
 }
 
+export interface LessonScormPackage {
+  version: "1.2" | "2004";
+  title: string | null;
+  fileCount: number;
+  totalBytes: number;
+  uploadedAt: string;
+}
+
 export interface LessonForEditing {
   id: string;
   sectionId: string;
@@ -21,6 +29,7 @@ export interface LessonForEditing {
   durationMinutes: number;
   isPreview: boolean;
   assets: LessonAsset[];
+  scormPackage: LessonScormPackage | null;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -52,6 +61,15 @@ export async function getLessonForEditing(
     .eq("lesson_id", lessonId)
     .order("created_at");
 
+  const { data: scormPackage } =
+    (data.type as LessonType) === "scorm"
+      ? await supabase
+          .from("scorm_packages")
+          .select("version, title, file_count, total_bytes, uploaded_at")
+          .eq("lesson_id", lessonId)
+          .maybeSingle()
+      : { data: null };
+
   return {
     id: data.id as string,
     sectionId: data.section_id as string,
@@ -69,5 +87,14 @@ export async function getLessonForEditing(
       mimeType: (a.mime_type as string | null) ?? null,
       sizeBytes: (a.size_bytes as number | null) ?? null,
     })),
+    scormPackage: scormPackage
+      ? {
+          version: scormPackage.version as "1.2" | "2004",
+          title: (scormPackage.title as string | null) ?? null,
+          fileCount: scormPackage.file_count as number,
+          totalBytes: scormPackage.total_bytes as number,
+          uploadedAt: scormPackage.uploaded_at as string,
+        }
+      : null,
   };
 }

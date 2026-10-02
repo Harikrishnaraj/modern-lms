@@ -63,8 +63,17 @@ export function parseQueueFilter(raw: string | string[] | undefined): QueueFilte
   return v === "graded" || v === "all" ? v : "pending";
 }
 
-export function filterQueue(rows: QueueRow[], filter: QueueFilter): QueueRow[] {
-  return filter === "all" ? rows : rows.filter((r) => (filter === "graded" ? r.status === "graded" : r.status !== "graded"));
+export function filterQueue(rows: QueueRow[], filter: QueueFilter, assignmentId: string | null = null): QueueRow[] {
+  const scoped = assignmentId ? rows.filter((r) => r.assignmentId === assignmentId) : rows;
+  return filter === "all" ? scoped : scoped.filter((r) => (filter === "graded" ? r.status === "graded" : r.status !== "graded"));
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** `?assignment=<id>` from the Assignments page; anything malformed means "every assignment". */
+export function parseAssignmentFilter(raw: string | string[] | undefined): string | null {
+  const v = Array.isArray(raw) ? raw[0] : raw;
+  return typeof v === "string" && UUID_RE.test(v) ? v.toLowerCase() : null;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

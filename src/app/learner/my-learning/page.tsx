@@ -13,9 +13,12 @@ import {
   splitLearning,
   type LearningItem,
 } from "@/features/my-learning/queries";
+import { getMyAssignedLearning } from "@/features/my-learning/assigned";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
 import { formatDuration, formatPrice } from "@/lib/utils/format";
+
+const dueDateFormat = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
 
 export const metadata: Metadata = { title: "My Learning" };
 
@@ -72,8 +75,9 @@ export default async function MyLearningPage({
   const tab: TabId = TABS.find((t) => t.id === rawTab)?.id ?? "in-progress";
 
   const supabase = await createClient();
-  const [items, saved] = await Promise.all([getMyLearning(supabase), getSavedCourses(supabase)]);
+  const [items, saved, assigned] = await Promise.all([getMyLearning(supabase), getSavedCourses(supabase), getMyAssignedLearning(supabase)]);
   const { inProgress, completed } = splitLearning(items);
+  const pendingAssigned = assigned.filter((a) => !a.isComplete);
   const counts: Record<TabId, number> = {
     "in-progress": inProgress.length,
     completed: completed.length,
@@ -83,6 +87,28 @@ export default async function MyLearningPage({
   return (
     <>
       <PageHeader title="My Learning" description="Your enrolled, completed and saved courses." />
+
+      {pendingAssigned.length > 0 && (
+        <section aria-labelledby="assigned-heading" className="mb-6 space-y-2 rounded-card border border-border p-4">
+          <h2 id="assigned-heading" className="text-sm font-semibold">
+            Assigned to you
+          </h2>
+          <ul className="space-y-1.5">
+            {pendingAssigned.map((a) => (
+              <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <Link href={a.href} className="hover:underline">
+                  {a.title}
+                </Link>
+                {a.dueAt && (
+                  <span className={cn("text-xs", a.isOverdue ? "font-medium text-danger-text" : "text-text-secondary")}>
+                    {a.isOverdue ? "Overdue" : "Due"} {dueDateFormat.format(new Date(a.dueAt))}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <nav aria-label="My Learning sections" className="mb-6 flex gap-1 border-b border-border">
         {TABS.map((t) => (

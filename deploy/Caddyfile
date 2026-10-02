@@ -1,0 +1,10 @@
+# Both hostnames reach the same app. The SCORM content host only serves /api/scorm/*; src/proxy.ts
+# returns 404 for everything else there (ADR-029), so it never carries a session.
+{$APP_HOST} {
+	encode zstd gzip
+	reverse_proxy app:3000
+}
+
+{$CONTENT_HOST} {
+	reverse_proxy app:3000
+}

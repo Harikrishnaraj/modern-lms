@@ -11,6 +11,9 @@ vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({ auth: { updateUser: updateUserMock } })),
 }));
+vi.mock("@/services/settings", () => ({
+  getPlatformSettings: vi.fn(async () => ({ minPasswordLength: 8, mfaRequiredPortals: ["admin"], sessionIdleTimeoutMinutes: null })),
+}));
 
 const validInput = { password: "password1", confirmPassword: "password1" };
 

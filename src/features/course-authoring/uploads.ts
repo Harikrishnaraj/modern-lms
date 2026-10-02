@@ -52,6 +52,27 @@ export function validateUpload(kind: MediaKind, req: UploadRequest): UploadCheck
   return { ok: true, ext: types[req.type], safeName: safeFileName(req.name), type: req.type };
 }
 
+/**
+ * Sniffs the first bytes of an uploaded file against the container magic bytes for its claimed
+ * extension. The browser-reported `type`/extension (checked in `validateUpload`) is trivially
+ * spoofable — renaming a text file to `.mp4` makes the browser report `video/mp4` — so this is
+ * the only check that the object we are about to attach is actually a playable container.
+ */
+export function looksLikeVideo(head: Uint8Array, ext: string): boolean {
+  if (ext === "webm") {
+    // WebM/Matroska EBML header.
+    return head.length >= 4 && head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3;
+  }
+  // MP4/ISO-BMFF: a 4-byte box size followed by an ASCII "ftyp" box type at offset 4.
+  return (
+    head.length >= 8 &&
+    head[4] === 0x66 && // f
+    head[5] === 0x74 && // t
+    head[6] === 0x79 && // y
+    head[7] === 0x70 // p
+  );
+}
+
 // ---- video reference stored in lessons.video_url ------------------------------------------------
 // Either an external https URL, or "storage://course-videos/<path>" for an uploaded file.
 

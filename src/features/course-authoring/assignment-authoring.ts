@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isFileTypeKey, LEGACY_FILE_TYPES } from "@/features/assignments/rules";
 import type { AssignmentInput } from "./assignment-rules";
 import { toDueInput } from "./assignment-rules";
 
@@ -45,7 +46,7 @@ export async function getAssignmentForEditing(supabase: SupabaseClient, versionI
   if (!UUID.test(id)) return null;
   const { data: a } = await supabase
     .from("assignments")
-    .select("id, version_id, title, instructions, due_at, max_points, allow_late, allow_text, allow_file, max_file_mb, assignment_submissions(id)")
+    .select("id, version_id, title, instructions, due_at, max_points, allow_late, allow_text, allow_file, max_file_mb, allowed_file_types, assignment_submissions(id)")
     .eq("id", id)
     .eq("version_id", versionId)
     .maybeSingle();
@@ -66,6 +67,7 @@ export async function getAssignmentForEditing(supabase: SupabaseClient, versionI
     allowText: a.allow_text as boolean,
     allowFile: a.allow_file as boolean,
     maxFileMb: a.max_file_mb as number,
+    allowedFileTypes: ((a.allowed_file_types as string[] | null) ?? [...LEGACY_FILE_TYPES]).filter(isFileTypeKey),
     submissions: ((a.assignment_submissions as unknown as unknown[]) ?? []).length,
     criteria: (criteria ?? []).map((c) => ({ title: c.title as string, description: c.description as string, maxPoints: c.max_points as number })),
   };

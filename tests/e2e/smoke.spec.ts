@@ -17,8 +17,8 @@ test("signed-out landing links to signup and login", async ({ page }) => {
 
 for (const [portal, target, heading] of [
   ["learner", "Certificates", "Certificates"],
-  ["instructor", "Create Course", "Create Course"],
-  ["admin", "Audit Logs", "Audit Logs"],
+  ["instructor", "Create Course", "Create a course"],
+  ["admin", "Audit Logs", "Audit log"],
 ] as const) {
   test(`${portal} shell navigates to ${target}`, async ({ page, isMobile }) => {
     // Instructor/admin shells need a user holding that role (T-019 guards).

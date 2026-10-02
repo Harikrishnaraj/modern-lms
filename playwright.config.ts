@@ -5,7 +5,9 @@ const PORT = Number(process.env.PORT ?? 3000);
 export default defineConfig({
   testDir: "tests/e2e",
   fullyParallel: true,
-  retries: process.env.CI ? 2 : 1,
+  retries: 1,
+  // In CI each shard has its own local Supabase stack (ADR-034), so two workers per runner is safe.
+  workers: process.env.CI ? 2 : undefined,
   // Pages read from a remote Supabase project; 5s is too tight under parallel load.
   expect: { timeout: 10_000 },
   reporter: process.env.CI ? "github" : "list",

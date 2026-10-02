@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 export interface OutlineLesson {
   id: string;
   title: string;
-  type: "video" | "text" | "quiz" | "assignment";
+  type: "video" | "text" | "quiz" | "assignment" | "scorm";
   durationMinutes: number;
   isPreview: boolean;
 }
@@ -34,6 +34,8 @@ export interface CourseDetail {
   ratingCount: number;
   categoryName: string | null;
   instructorName: string | null;
+  instructorHeadline: string | null;
+  instructorBio: string | null;
   publishedAt: string | null;
   sections: OutlineSection[];
   lessonCount: number;
@@ -61,6 +63,8 @@ interface DetailRow {
   rating_count: number;
   category_name: string | null;
   instructor_name: string | null;
+  instructor_headline: string | null;
+  instructor_bio: string | null;
   published_at: string | null;
 }
 
@@ -148,6 +152,8 @@ export async function getCourseDetail(
     ratingCount: row.rating_count,
     categoryName: row.category_name,
     instructorName: row.instructor_name,
+    instructorHeadline: row.instructor_headline,
+    instructorBio: row.instructor_bio,
     publishedAt: row.published_at,
     sections,
     lessonCount: sections.reduce((n, s) => n + s.lessons.length, 0),

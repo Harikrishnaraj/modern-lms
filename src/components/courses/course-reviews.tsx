@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { ReportReviewButton } from "@/components/courses/report-review-button";
 import { ReviewForm } from "@/components/courses/review-form";
 import { distributionPercent, type CourseReviews } from "@/features/reviews/reviews";
 
@@ -75,6 +76,7 @@ export function CourseReviewsSection({ data, signedIn }: { data: CourseReviews; 
                   <p className="whitespace-pre-wrap">{r.instructorReply}</p>
                 </div>
               )}
+              {signedIn && !r.mine && <ReportReviewButton reviewId={r.id} />}
             </li>
           ))}
         </ul>

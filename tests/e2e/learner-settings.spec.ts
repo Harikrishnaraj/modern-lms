@@ -10,6 +10,8 @@ const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
 
 // F-116: profile, avatar and password from the learner settings page.
 test.describe("learner settings", () => {
+  // The second test signs in with the password the first test sets, so they run in order.
+  test.describe.configure({ mode: "serial" });
   const svc = serviceClient();
   const tag = uniqueTag("set");
   const learnerIds: string[] = [];
@@ -33,11 +35,17 @@ test.describe("learner settings", () => {
     await cleanup(svc, { learnerIds, courseIds: [], userIds: [] });
   });
 
-  test("edits the name and picture, rejects a bad file, then changes the password", async ({ page }) => {
+  test("edits the name and picture, rejects a bad file, then changes the password", async ({ page, isMobile }) => {
     test.setTimeout(180_000);
     await signIn(page, learner.password);
     await page.waitForURL("/learner");
-    await page.getByRole("navigation", { name: "Learner navigation" }).getByRole("link", { name: "Settings" }).click();
+    // On phones the sidebar lives behind the menu button.
+    if (isMobile) {
+      await page.getByRole("button", { name: "Open navigation" }).click();
+      await page.getByRole("dialog", { name: "Navigation" }).getByRole("link", { name: "Settings" }).click();
+    } else {
+      await page.getByRole("navigation", { name: "Learner navigation" }).getByRole("link", { name: "Settings" }).click();
+    }
     await expect(page).toHaveURL(/\/learner\/settings$/);
     await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
     await page.waitForLoadState("networkidle");

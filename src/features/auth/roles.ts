@@ -7,7 +7,6 @@ const BACK_OFFICE_ROLES = new Set([
   "admin",
   "support_agent",
   "content_reviewer",
-  "org_admin",
 ]);
 
 export async function getPortalPathForUser(
@@ -17,6 +16,8 @@ export async function getPortalPathForUser(
   const { data } = await supabase.from("user_roles").select("role_id").eq("user_id", userId);
   const roleIds = new Set((data ?? []).map((row) => row.role_id as string));
 
+  // T-162: org_admin has its own scoped portal, not the full admin console.
+  if (roleIds.has("org_admin")) return "/org_admin";
   if ([...roleIds].some((role) => BACK_OFFICE_ROLES.has(role))) return "/admin";
   if (roleIds.has("instructor")) return "/instructor";
   return "/learner";

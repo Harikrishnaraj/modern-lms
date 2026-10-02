@@ -4,7 +4,11 @@ import { useState, type FormEvent } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { signUpSchema, type SignUpInput } from "@/features/auth/schemas";
+import { buildSignUpSchema, type SignUpInput } from "@/features/auth/schemas";
+
+// Client-side pre-check only, for instant feedback; the server re-validates against the
+// platform's configured minimum (T-143), which may be stricter than this baseline.
+const signUpSchema = buildSignUpSchema(8);
 
 type FieldErrors = Partial<Record<keyof SignUpInput, string>>;
 

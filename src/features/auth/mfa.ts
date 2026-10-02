@@ -4,13 +4,18 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { safeNextPath } from "@/lib/permissions/mfa";
+import { log } from "@/lib/log";
 
 const codeSchema = z.string().regex(/^\d{6}$/, "Enter the 6-digit code.");
 
 export type MfaEnrollment = { factorId: string; qrCode: string; secret: string };
 
 // Starts TOTP enrolment for the signed-in user. Stale unverified factors are
-// removed first so a page refresh doesn't hit the friendly-name conflict.
+// removed first, and each enrolment gets a unique friendly name: the /mfa page
+// can be rendered twice in quick succession (seen under a vinext build), and
+// two concurrent enrolments with the same (empty) name hit
+// mfa_factor_name_conflict. Each render then shows its own valid factor; the
+// unverified leftovers are removed on the next visit.
 export async function startMfaEnrollment(): Promise<MfaEnrollment | { error: string }> {
   const supabase = await createClient();
   const { data: user } = await supabase.auth.getUser();
@@ -23,8 +28,14 @@ export async function startMfaEnrollment(): Promise<MfaEnrollment | { error: str
     }
   }
 
-  const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp" });
-  if (error || !data) return { error: "Could not start two-factor setup. Try again." };
+  const { data, error } = await supabase.auth.mfa.enroll({
+    factorType: "totp",
+    friendlyName: `Authenticator ${crypto.randomUUID().slice(0, 8)}`,
+  });
+  if (error || !data) {
+    log.warn("auth.mfa_enroll_failed", { code: error?.code, status: error?.status, message: error?.message });
+    return { error: "Could not start two-factor setup. Try again." };
+  }
   return { factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret };
 }
 

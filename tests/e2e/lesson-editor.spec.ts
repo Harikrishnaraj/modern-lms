@@ -116,8 +116,17 @@ test.describe("lesson editor", () => {
 
   test("a video lesson takes a link or an upload; bad links are rejected", async ({ page }) => {
     test.setTimeout(120_000);
+    // Its own draft course: the first test publishes the shared one, which locks its editor, and
+    // tests in this file may share a worker in any order.
+    const vc = await createCourse(svc, instructor.id, {
+      slug: `${tag}-vid-${courseIds.length}`,
+      title: `${tag} Video Course`,
+      publish: false,
+      sections: [{ title: "Sec", lessons: [{ title: "Text lesson", type: "text" }, { title: "Video lesson", type: "video" }] }],
+    });
+    courseIds.push(vc.courseId);
     await signIn(page, instructor, "/instructor");
-    await page.goto(`/instructor/courses/${course.courseId}/lessons/${course.lessonIds[1]}`);
+    await page.goto(`/instructor/courses/${vc.courseId}/lessons/${vc.lessonIds[1]}`);
     await page.waitForLoadState("networkidle");
 
     await page.getByLabel("Video link").fill("http://insecure.example.com/v.mp4");
@@ -132,12 +141,12 @@ test.describe("lesson editor", () => {
     await expect(page.getByText("An uploaded video is attached.")).toBeVisible();
     await page.getByRole("button", { name: "Save lesson" }).click();
     await expect(page.getByRole("status").filter({ hasText: "Saved." })).toBeVisible();
-    const { data } = await svc.from("lessons").select("video_url").eq("id", course.lessonIds[1]).single();
-    expect(data!.video_url).toMatch(new RegExp(`^storage://course-videos/${course.courseId}/${course.lessonIds[1]}/`));
+    const { data } = await svc.from("lessons").select("video_url").eq("id", vc.lessonIds[1]).single();
+    expect(data!.video_url).toMatch(new RegExp(`^storage://course-videos/${vc.courseId}/${vc.lessonIds[1]}/`));
     objectPaths.push({ bucket: "course-videos", path: (data!.video_url as string).replace("storage://course-videos/", "") });
 
     // Text lessons have no video section.
-    await page.goto(`/instructor/courses/${course.courseId}/lessons/${course.lessonIds[0]}`);
+    await page.goto(`/instructor/courses/${vc.courseId}/lessons/${vc.lessonIds[0]}`);
     await expect(page.getByLabel("Video link")).toHaveCount(0);
   });
 

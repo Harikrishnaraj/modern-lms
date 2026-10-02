@@ -96,7 +96,7 @@ export function CourseTable({
       {view === "table" ? (
         <div className="overflow-x-auto rounded-card border border-border bg-surface">
           <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b border-border bg-border-subtle text-xs text-text-secondary uppercase">
+            <thead className="border-b border-border bg-border-subtle text-xs text-neutral-text uppercase">
               <tr>
                 {canReview && <th scope="col" className="w-10 p-3"><span className="sr-only">Select</span></th>}
                 <th scope="col" className="p-3">Course</th>

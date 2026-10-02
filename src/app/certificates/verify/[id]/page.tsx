@@ -73,6 +73,7 @@ export default async function VerifyCertificatePage({
         <p className="font-display text-3xl font-bold">{cert.learnerName}</p>
         <p className="text-sm text-text-secondary">has successfully completed</p>
         <p className="text-xl font-semibold">{cert.courseTitle}</p>
+        {cert.closingMessage && <p className="text-sm text-text-secondary italic">{cert.closingMessage}</p>}
         <dl className="mx-auto grid max-w-sm gap-2 text-sm">
           <div className="flex justify-between gap-4">
             <dt className="text-text-secondary">Issued</dt>
@@ -81,7 +82,10 @@ export default async function VerifyCertificatePage({
           {cert.instructorName && (
             <div className="flex justify-between gap-4">
               <dt className="text-text-secondary">Instructor</dt>
-              <dd>{cert.instructorName}</dd>
+              <dd>
+                {cert.instructorName}
+                {cert.signatureTitle ? `, ${cert.signatureTitle}` : ""}
+              </dd>
             </div>
           )}
           <div className="flex justify-between gap-4">

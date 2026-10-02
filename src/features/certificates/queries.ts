@@ -15,6 +15,8 @@ export interface PublicCertificate {
   learnerName: string;
   courseTitle: string;
   instructorName: string | null;
+  signatureTitle: string | null;
+  closingMessage: string | null;
   issuedAt: string;
   revokedAt: string | null;
 }
@@ -63,6 +65,8 @@ export async function verifyCertificate(
         learner_name: string;
         course_title: string;
         instructor_name: string | null;
+        signature_title: string | null;
+        closing_message: string | null;
         issued_at: string;
         revoked_at: string | null;
       }
@@ -74,6 +78,8 @@ export async function verifyCertificate(
     learnerName: row.learner_name,
     courseTitle: row.course_title,
     instructorName: row.instructor_name,
+    signatureTitle: row.signature_title,
+    closingMessage: row.closing_message,
     issuedAt: row.issued_at,
     revokedAt: row.revoked_at,
   };

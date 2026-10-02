@@ -2,6 +2,7 @@ import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { LoginForm } from "@/components/forms/login-form";
+import { AuthDivider, GoogleSignInButton } from "@/components/forms/google-sign-in-button";
 import { login } from "@/features/auth/login";
 
 export const metadata = { title: "Log in" };
@@ -9,9 +10,17 @@ export const metadata = { title: "Log in" };
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ next?: string; error?: string }>;
 }) {
-  const { next } = await searchParams;
+  const { next, error } = await searchParams;
+  const ssoError =
+    error === "sso_failed"
+      ? "Google sign-in did not complete. Please try again."
+      : error === "sso_unavailable"
+        ? "Google sign-in is not available right now. Please log in with your email."
+        : error === "rate_limited"
+          ? "Too many attempts. Please wait a while and try again."
+          : null;
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 py-16">
@@ -25,6 +34,13 @@ export default async function LoginPage({
       <Card>
         <CardHeader title="Welcome back" description="Log in to continue learning." />
         <CardContent>
+          {ssoError && (
+            <p role="alert" className="mb-4 rounded-card border border-danger bg-danger-light p-3 text-sm text-danger-text">
+              {ssoError}
+            </p>
+          )}
+          <GoogleSignInButton next={next ?? null} />
+          <AuthDivider />
           <LoginForm onSubmit={login.bind(null, next ?? null)} />
         </CardContent>
       </Card>

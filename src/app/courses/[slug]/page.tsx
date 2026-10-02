@@ -12,6 +12,7 @@ import {
   PlayCircle,
   ClipboardList,
   HelpCircle,
+  Package,
   Star,
   type LucideIcon,
 } from "lucide-react";
@@ -36,6 +37,7 @@ const LESSON_ICON: Record<OutlineLesson["type"], LucideIcon> = {
   text: FileText,
   quiz: HelpCircle,
   assignment: ClipboardList,
+  scorm: Package,
 };
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
@@ -222,6 +224,17 @@ export default async function CourseDetailPage({ params }: { params: Promise<Par
                   <li key={p.id}>{p.title}</li>
                 ))}
               </ul>
+            </section>
+          )}
+
+          {course.instructorName && (course.instructorHeadline || course.instructorBio) && (
+            <section aria-labelledby="instructor-heading" className="space-y-2">
+              <h2 id="instructor-heading" className="text-xl font-semibold">
+                About the instructor
+              </h2>
+              <p className="font-medium">{course.instructorName}</p>
+              {course.instructorHeadline && <p className="text-sm text-text-secondary">{course.instructorHeadline}</p>}
+              {course.instructorBio && <p className="whitespace-pre-line text-sm text-text-secondary">{course.instructorBio}</p>}
             </section>
           )}
 

@@ -10,6 +10,7 @@ const base = (over: Partial<AssignmentInput> = {}): AssignmentInput => ({
   allowText: true,
   allowFile: true,
   maxFileMb: 5,
+  allowedFileTypes: ["pdf", "docx"],
   criteria: [],
   ...over,
 });

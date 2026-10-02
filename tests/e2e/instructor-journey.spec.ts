@@ -1,6 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { loadEnvLocal } from "./support/env";
 import { cleanup, createUserWithRole, serviceClient, uniqueTag } from "../support/course-fixtures";
+
+// Question rows render as <p>; the question picker repeats the same text in an <option>.
+const questionRow = (page: Page, text: string) =>
+  page.locator("p").filter({ hasText: new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) });
 
 loadEnvLocal();
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -97,7 +101,7 @@ test.describe("instructor journey", () => {
     await page.getByLabel("Option 2 text").fill("No");
     await page.getByLabel("Option 1 is correct").check();
     await page.getByRole("button", { name: "Add question" }).last().click();
-    await expect(page.getByText("1. Is this a journey?")).toBeVisible();
+    await expect(questionRow(page, "1. Is this a journey?")).toBeVisible();
 
     // Pricing: paid, then preview.
     await page.goto(`/instructor/courses/${courseId}/pricing`);
@@ -118,7 +122,8 @@ test.describe("instructor journey", () => {
     await page.waitForLoadState("networkidle");
     await page.getByLabel(/Notes for the reviewer/).fill("Ready for a look.");
     await page.getByRole("button", { name: "Submit for review" }).click();
-    await expect(page.getByText("Submitted. A reviewer will pick this up soon.")).toBeVisible();
+    // Server action + router.refresh() re-renders a query-heavy page; allow for a slow database.
+    await expect(page.getByText("Submitted. A reviewer will pick this up soon.")).toBeVisible({ timeout: 30_000 });
 
     // The overview and My Courses reflect the new state; the course is locked.
     await page.goto(`/instructor/courses/${courseId}`);

@@ -46,4 +46,29 @@ describe("rateLimit", () => {
   it("takes the first X-Forwarded-For hop as the client IP", async () => {
     expect(await clientIp()).toBe("9.9.9.9");
   });
+
+  it("rate-limits upload initiation (T-241, SECURITY §18)", async () => {
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    await rateLimit("upload-initiate", "1.1.1.1", "user-1");
+    expect(rpcMock).toHaveBeenCalledWith("check_rate_limit", {
+      p_key: "upload-initiate:ip:1.1.1.1",
+      p_limit: 900,
+      p_window_seconds: 600,
+    });
+    expect(rpcMock).toHaveBeenCalledWith("check_rate_limit", {
+      p_key: "upload-initiate:user-1",
+      p_limit: 30,
+      p_window_seconds: 600,
+    });
+  });
+
+  it("rate-limits analytics/report exports (T-241, SECURITY §18)", async () => {
+    rpcMock.mockResolvedValue({ data: true, error: null });
+    await rateLimit("analytics-export", "1.1.1.1", "user-1");
+    expect(rpcMock).toHaveBeenCalledWith("check_rate_limit", {
+      p_key: "analytics-export:user-1",
+      p_limit: 20,
+      p_window_seconds: 600,
+    });
+  });
 });

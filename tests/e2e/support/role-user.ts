@@ -34,6 +34,8 @@ export async function loginAsRole(page: Page, role: string, opts: { mfa?: boolea
     .from("user_roles")
     .insert({ user_id: userId, role_id: role });
   if (roleError) throw roleError;
+  // Learner specs exercise the portal, not onboarding (onboarding.spec.ts covers that with its own user).
+  if (role === "learner") await db.from("learner_onboarding").insert({ user_id: userId, interests: ["design"] });
 
   const state = { secret: "" };
   const login = async () => {
@@ -42,13 +44,13 @@ export async function loginAsRole(page: Page, role: string, opts: { mfa?: boolea
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(PASSWORD);
     await page.getByRole("button", { name: "Log in" }).click();
-    await page.waitForURL(/\/(learner|instructor|admin|mfa)(\?.*)?$/);
+    await page.waitForURL(/\/(learner|instructor|admin|org_admin|mfa)(\?.*)?$/);
     if (page.url().includes("/mfa") && opts.mfa !== false) {
       const secretEl = page.getByTestId("mfa-secret");
       if (await secretEl.count()) state.secret = (await secretEl.innerText()).trim();
       await page.getByLabel("Authentication code").fill(totp(state.secret));
       await page.getByRole("button", { name: "Verify" }).click();
-      await page.waitForURL(/\/admin$/);
+      await page.waitForURL(/\/(admin|org_admin)$/);
     }
   };
   await login();

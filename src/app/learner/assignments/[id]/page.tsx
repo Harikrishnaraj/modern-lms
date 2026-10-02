@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft, Lock, Paperclip } from "lucide-react";
+import { ChevronLeft, Download, Lock, Paperclip } from "lucide-react";
 import { AssignmentForm } from "@/components/assignments/assignment-form";
+import { AssignmentInstructions } from "@/components/assignments/assignment-instructions";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { getMyAssignment } from "@/features/assignments/queries";
-import { STATUS_LABEL, canSubmit } from "@/features/assignments/rules";
+import { getAssignmentResources, withDownloadUrls } from "@/features/assignments/resources";
+import { STATUS_LABEL, acceptFor, canSubmit, fileTypeList } from "@/features/assignments/rules";
 import { createClient } from "@/lib/supabase/server";
 import { formatFileSize } from "@/lib/utils/format";
 import { SUBMISSION_BUCKET, supabaseStorage } from "@/services/storage";
@@ -26,6 +28,8 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
   if (!a) notFound();
 
   const sub = a.submission;
+  // Reference files the instructor attached; rows come back only for enrolled learners (RLS).
+  const resources = await withDownloadUrls(await getAssignmentResources(supabase, a.id));
   // The learner own file, via a short-lived signed URL (the bucket is private).
   let fileUrl: string | null = null;
   if (sub?.filePath) {
@@ -53,7 +57,11 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
           <h2 id="brief-heading" className="text-base font-semibold">
             Instructions
           </h2>
-          <p className="text-sm whitespace-pre-wrap">{a.instructions || "No instructions were provided."}</p>
+          {a.instructions.trim() ? (
+            <AssignmentInstructions text={a.instructions} />
+          ) : (
+            <p className="text-sm text-text-secondary">No instructions were provided.</p>
+          )}
           <dl className="grid grid-cols-2 gap-x-4 gap-y-1 pt-2 text-sm">
             <dt className="text-text-secondary">Deadline</dt>
             <dd>{a.dueAt ? `${dateTime.format(new Date(a.dueAt))} UTC${a.allowLate ? " (late work accepted)" : ""}` : "None"}</dd>
@@ -65,6 +73,29 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
             </dd>
           </dl>
         </section>
+
+        {resources.length > 0 && (
+          <section aria-labelledby="resources-heading" className="space-y-2 rounded-card border border-border bg-surface p-5">
+            <h2 id="resources-heading" className="text-base font-semibold">
+              Reference files
+            </h2>
+            <ul className="space-y-1.5">
+              {resources.map((r) => (
+                <li key={r.id} className="flex items-center gap-2 text-sm">
+                  <Download className="size-4 shrink-0 text-text-secondary" aria-hidden="true" />
+                  {r.url ? (
+                    <a href={r.url} download={r.name} rel="noopener noreferrer" className="text-primary underline">
+                      {r.name}
+                    </a>
+                  ) : (
+                    <span>{r.name} (unavailable right now)</span>
+                  )}
+                  <span className="text-text-secondary">({formatFileSize(r.sizeBytes)})</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {sub && (
           <section aria-labelledby="mine-heading" className="space-y-2 rounded-card border border-border bg-surface p-5">
@@ -109,6 +140,8 @@ export default async function AssignmentPage({ params }: { params: Promise<{ id:
             allowText={a.allowText}
             allowFile={a.allowFile}
             maxFileMb={a.maxFileMb}
+            accept={acceptFor(a.allowedFileTypes)}
+            typeList={fileTypeList(a.allowedFileTypes)}
             initialText={sub?.text ?? ""}
             replacing={sub !== null}
           />

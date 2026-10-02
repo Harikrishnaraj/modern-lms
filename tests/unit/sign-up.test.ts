@@ -11,6 +11,9 @@ vi.mock("next/navigation", () => ({ redirect: redirectMock }));
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => ({ auth: { signUp: signUpMock } })),
 }));
+vi.mock("@/services/settings", () => ({
+  getPlatformSettings: vi.fn(async () => ({ minPasswordLength: 8, mfaRequiredPortals: ["admin"], sessionIdleTimeoutMinutes: null })),
+}));
 
 const validInput = {
   email: "test@example.com",
@@ -44,5 +47,10 @@ describe("signUp server action", () => {
     expect(signUpMock).toHaveBeenCalledWith(
       expect.objectContaining({ email: validInput.email, password: validInput.password }),
     );
+  });
+
+  it("does not reveal an already-registered email even when Supabase reports it", async () => {
+    signUpMock.mockResolvedValue({ error: { code: "user_already_exists", message: "User already registered" } });
+    await expect(signUp(validInput)).rejects.toThrow("REDIRECT:/verify-email?email=test%40example.com");
   });
 });

@@ -38,8 +38,13 @@ export function validateEmail(email: string): string | null {
   return null;
 }
 
-export function validatePassword(password: string): string | null {
-  return password.length >= MIN_PASSWORD_LENGTH ? null : `Use at least ${MIN_PASSWORD_LENGTH} characters for the password.`;
+/**
+ * Admin-created accounts never go below MIN_PASSWORD_LENGTH even if the platform's configured
+ * minimum (T-143) is lower, but a higher configured minimum still raises the bar further.
+ */
+export function validatePassword(password: string, configuredMinLength = MIN_PASSWORD_LENGTH): string | null {
+  const floor = Math.max(configuredMinLength, MIN_PASSWORD_LENGTH);
+  return password.length >= floor ? null : `Use at least ${floor} characters for the password.`;
 }
 
 /** Deduplicated known roles, or an error when empty or unknown. */

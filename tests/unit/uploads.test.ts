@@ -3,6 +3,7 @@ import {
   MAX_ASSET_BYTES,
   MAX_VIDEO_BYTES,
   isStorageVideo,
+  looksLikeVideo,
   normalizeVideoRef,
   safeFileName,
   storageVideoPath,
@@ -37,6 +38,29 @@ describe("validateUpload", () => {
   it("rejects a missing name", () => {
     expect(validateUpload("asset", { name: "  ", size: 1, type: "application/pdf" })).toMatchObject({ ok: false });
     expect(validateUpload("asset", { name: 5, size: 1, type: "application/pdf" })).toMatchObject({ ok: false });
+  });
+});
+
+describe("looksLikeVideo", () => {
+  it("accepts a real MP4 ftyp box", () => {
+    const head = new Uint8Array([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d]);
+    expect(looksLikeVideo(head, "mp4")).toBe(true);
+  });
+
+  it("accepts a real WebM/EBML header", () => {
+    const head = new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0, 0, 0, 0]);
+    expect(looksLikeVideo(head, "webm")).toBe(true);
+  });
+
+  it("rejects a text file renamed to .mp4 (the exact spoof a browser-reported MIME lets through)", () => {
+    const head = new TextEncoder().encode("this is just text, not a video");
+    expect(looksLikeVideo(head, "mp4")).toBe(false);
+  });
+
+  it("rejects a truncated/too-short buffer and an mp4 header claimed as webm", () => {
+    expect(looksLikeVideo(new Uint8Array([1, 2, 3]), "mp4")).toBe(false);
+    const mp4Head = new Uint8Array([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70]);
+    expect(looksLikeVideo(mp4Head, "webm")).toBe(false);
   });
 });
 

@@ -39,7 +39,16 @@ export function ThreadConversation({
   initialMessages: DirectMessage[];
 }) {
   const router = useRouter();
+  // `messages` holds an optimistic append (handleSend) on top of the server's initialMessages
+  // until the next refresh brings the authoritative list -- adjusted during render (React's
+  // documented pattern for "reset state when a prop changes") rather than in an effect, since
+  // initialMessages changing IS the signal to drop the optimistic overlay.
+  const [prevInitialMessages, setPrevInitialMessages] = useState(initialMessages);
   const [messages, setMessages] = useState<DirectMessage[]>(initialMessages);
+  if (initialMessages !== prevInitialMessages) {
+    setPrevInitialMessages(initialMessages);
+    setMessages(initialMessages);
+  }
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +62,6 @@ export function ThreadConversation({
       });
     }
   }, [thread.threadId, thread.unreadCount, router]);
-
-  useEffect(() => {
-    setMessages(initialMessages);
-  }, [initialMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

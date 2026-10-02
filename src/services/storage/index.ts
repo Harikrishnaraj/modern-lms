@@ -15,13 +15,26 @@ export interface StorageAdapter {
   createSignedUrl(bucket: string, path: string, expiresInSeconds: number): Promise<string>;
   /** Whether an object exists at `path` (used to verify a completed direct upload). */
   exists(bucket: string, path: string): Promise<boolean>;
+  /** Copies an object, optionally into a different bucket, without a client round-trip. */
+  copy(fromBucket: string, fromPath: string, toBucket: string, toPath: string): Promise<void>;
+  /** Stores the bytes in a private bucket. No URL is returned; read it back with `download`. */
+  upload(bucket: string, path: string, bytes: Uint8Array, contentType: string): Promise<void>;
+  /** Reads an object's bytes and stored content-type directly (service role) for server-side proxying. */
+  download(bucket: string, path: string): Promise<{ bytes: Uint8Array; contentType: string }>;
+  /** The first `byteCount` bytes of an object, for sniffing real content (e.g. video magic bytes). */
+  readHeader(bucket: string, path: string, byteCount: number): Promise<Uint8Array>;
 }
 
 export const THUMBNAIL_BUCKET = "course-thumbnails";
 export const VIDEO_BUCKET = "course-videos";
 export const ASSET_BUCKET = "lesson-assets";
 export const SUBMISSION_BUCKET = "assignment-submissions";
+export const ASSIGNMENT_RESOURCE_BUCKET = "assignment-resources";
 export const AVATAR_BUCKET = "avatars";
+export const RESOURCE_LIBRARY_BUCKET = "resource-library";
+export const SCORM_BUCKET = "scorm-packages";
+export const SCORM_STAGING_BUCKET = "scorm-uploads";
+export const REPORT_EXPORT_BUCKET = "report-exports";
 
 export const supabaseStorage: StorageAdapter = {
   async uploadPublic(bucket, path, bytes, contentType) {
@@ -59,5 +72,36 @@ export const supabaseStorage: StorageAdapter = {
       .storage.from(bucket)
       .list(i === -1 ? "" : path.slice(0, i), { search: path.slice(i + 1), limit: 1 });
     return (data ?? []).some((o) => o.name === path.slice(i + 1));
+  },
+
+  async copy(fromBucket, fromPath, toBucket, toPath) {
+    const { error } = await createAdminClient()
+      .storage.from(fromBucket)
+      .copy(fromPath, toPath, { destinationBucket: toBucket });
+    if (error) throw new Error(`storage copy failed: ${error.message}`);
+  },
+
+  async upload(bucket, path, bytes, contentType) {
+    const { error } = await createAdminClient().storage.from(bucket).upload(path, bytes, {
+      contentType,
+      upsert: true,
+      cacheControl: "31536000",
+    });
+    if (error) throw new Error(`storage upload failed: ${error.message}`);
+  },
+
+  async download(bucket, path) {
+    const { data, error } = await createAdminClient().storage.from(bucket).download(path);
+    if (error || !data) throw new Error(`storage download failed: ${error?.message}`);
+    return { bytes: new Uint8Array(await data.arrayBuffer()), contentType: data.type || "application/octet-stream" };
+  },
+
+  async readHeader(bucket, path, byteCount) {
+    // The storage-js `download()` helper does not expose a Range header, so we fetch the object's
+    // own (short-lived, server-only) signed URL directly to read just its first bytes.
+    const url = await this.createSignedUrl(bucket, path, 60);
+    const res = await fetch(url, { headers: { Range: `bytes=0-${byteCount - 1}` } });
+    if (!res.ok && res.status !== 206) throw new Error(`storage read failed: HTTP ${res.status}`);
+    return new Uint8Array(await res.arrayBuffer());
   },
 };

@@ -1,4 +1,6 @@
+import { captureError } from "@/services/error-tracking";
 import { notify } from "@/services/notifications";
+import { dispatchWebhookEvent } from "@/services/webhooks/dispatch";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { summarizeCompletion } from "./rules";
 
@@ -80,21 +82,41 @@ export async function evaluateCompletion(
       .update({ status: "completed", completed_at: new Date().toISOString() })
       .eq("id", enrollmentId)
       .eq("status", "active");
+    await dispatchWebhookEvent("course.completed", {
+      userId: enrollment.user_id as string,
+      courseId: enrollment.course_id as string,
+      enrollmentId,
+    });
   }
 
   if (!versionRes.data?.certificate_enabled) return { complete: true, certificateCode: null };
 
+  // A revoked certificate can be reissued (T-137), which leaves both a revoked history row and a
+  // live one for the same enrollment, so this can no longer assume at most one row.
   const existing = await admin
     .from("certificates")
-    .select("code")
+    .select("code, status")
     .eq("enrollment_id", enrollmentId)
+    .order("issued_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
-  if (existing.data) return { complete: true, certificateCode: existing.data.code as string };
+  if (existing.data) {
+    return {
+      complete: true,
+      certificateCode: existing.data.status === "revoked" ? null : (existing.data.code as string),
+    };
+  }
 
   const { data: instructor } = await admin
     .from("profiles")
     .select("full_name")
     .eq("id", courseRes.data?.instructor_id)
+    .maybeSingle();
+
+  const { data: template } = await admin
+    .from("certificate_templates")
+    .select("signature_title, closing_message")
+    .eq("course_id", enrollment.course_id)
     .maybeSingle();
 
   const { data: cert, error } = await admin
@@ -107,14 +129,27 @@ export async function evaluateCompletion(
       learner_name: await learnerName(admin, enrollment.user_id as string),
       course_title: versionRes.data.title,
       instructor_name: (instructor?.full_name as string | null) ?? null,
+      signature_title: (template?.signature_title as string | null) ?? null,
+      closing_message: (template?.closing_message as string | null) ?? null,
     })
     .select("code")
     .single();
 
   if (error) {
     // Unique violation = a parallel evaluation issued it first: return that one.
-    const again = await admin.from("certificates").select("code").eq("enrollment_id", enrollmentId).maybeSingle();
-    if (again.data) return { complete: true, certificateCode: again.data.code as string };
+    const again = await admin
+      .from("certificates")
+      .select("code, status")
+      .eq("enrollment_id", enrollmentId)
+      .order("issued_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (again.data) {
+      return {
+        complete: true,
+        certificateCode: again.data.status === "revoked" ? null : (again.data.code as string),
+      };
+    }
     throw new Error(`issueCertificate failed: ${error.message}`);
   }
   await notify({
@@ -122,6 +157,11 @@ export async function evaluateCompletion(
     category: "course",
     title: `You earned a certificate for ${versionRes.data.title as string}`,
     href: "/learner/certificates",
+  });
+  await dispatchWebhookEvent("certificate.issued", {
+    userId: enrollment.user_id as string,
+    courseId: enrollment.course_id as string,
+    certificateCode: cert.code as string,
   });
   return { complete: true, certificateCode: cert.code as string };
 }
@@ -134,7 +174,7 @@ export async function tryEvaluateCompletion(
   try {
     return await evaluateCompletion(admin, enrollmentId);
   } catch (err) {
-    console.error("evaluateCompletion failed", err);
+    void captureError("completion.evaluate_failed", err);
     return NOT_COMPLETE;
   }
 }

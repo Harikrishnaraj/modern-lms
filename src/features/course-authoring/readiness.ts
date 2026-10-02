@@ -7,7 +7,7 @@ import type { CourseStepId } from "./steps";
 export interface ReadinessLesson {
   id: string;
   title: string;
-  type: "video" | "text" | "quiz" | "assignment";
+  type: "video" | "text" | "quiz" | "assignment" | "scorm";
   content: string;
   videoUrl: string | null;
 }

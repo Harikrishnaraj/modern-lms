@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils/cn";
 export type BadgeTone = "neutral" | "primary" | "success" | "warning" | "danger" | "info" | "ai";
 
 const tones: Record<BadgeTone, { pill: string; dot: string }> = {
-  neutral: { pill: "bg-border-subtle text-text-secondary", dot: "bg-text-muted" },
+  neutral: { pill: "bg-border-subtle text-neutral-text", dot: "bg-text-muted" },
   primary: { pill: "bg-primary-light text-primary-dark", dot: "bg-primary" },
   success: { pill: "bg-success-light text-success-text", dot: "bg-success" },
   warning: { pill: "bg-warning-light text-warning-text", dot: "bg-warning" },

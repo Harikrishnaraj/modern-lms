@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
-import { Bell, GraduationCap, LogOut, Menu, MoreHorizontal, X } from "lucide-react";
+import { Bell, GraduationCap, LogOut, Menu, MoreHorizontal, UserCircle, X } from "lucide-react";
 import { NAVIGATION, activeNavHref, allNavItems, type NavItem } from "@/config/navigation";
 import type { Portal } from "@/types/portal";
 import { cn } from "@/lib/utils/cn";
@@ -16,7 +16,7 @@ const THEME: Record<
   learner: {
     aside: "bg-surface border-r border-border",
     brand: "text-text",
-    groupLabel: "text-text-muted",
+    groupLabel: "text-text-secondary",
     item: "gap-3 px-3 py-2 text-sm",
     active: "bg-primary-light text-primary font-semibold",
     idle: "text-text-secondary hover:bg-border-subtle hover:text-text",
@@ -32,7 +32,15 @@ const THEME: Record<
   admin: {
     aside: "bg-surface border-r border-border",
     brand: "text-text",
-    groupLabel: "text-text-muted",
+    groupLabel: "text-text-secondary",
+    item: "gap-2.5 px-2.5 py-1.5 text-[13px]",
+    active: "bg-primary-light text-primary-dark font-semibold",
+    idle: "text-text-secondary hover:bg-border-subtle hover:text-text",
+  },
+  org_admin: {
+    aside: "bg-surface border-r border-border",
+    brand: "text-text",
+    groupLabel: "text-text-secondary",
     item: "gap-2.5 px-2.5 py-1.5 text-[13px]",
     active: "bg-primary-light text-primary-dark font-semibold",
     idle: "text-text-secondary hover:bg-border-subtle hover:text-text",
@@ -234,12 +242,17 @@ function LearnerBottomBar({ onOpenMore }: { onOpenMore: () => void }) {
   );
 }
 
-function UserMenu({ email, onLogout }: { email: string; onLogout: () => Promise<void> }) {
+function UserMenu({ email, profileHref, onLogout }: { email: string; profileHref?: string; onLogout: () => Promise<void> }) {
   return (
     <div className="flex items-center gap-2">
       <span className="hidden max-w-[180px] truncate text-sm text-text-secondary sm:inline">
         {email}
       </span>
+      {profileHref && (
+        <Link href={profileHref} className="rounded-control p-2 text-text-secondary hover:bg-border-subtle hover:text-text" aria-label="My profile">
+          <UserCircle className="size-4" aria-hidden="true" />
+        </Link>
+      )}
       <form action={onLogout}>
         <button
           type="submit"
@@ -278,6 +291,7 @@ export function PortalShell({
   user,
   onLogout,
   unreadNotifications,
+  profileHref,
   children,
 }: {
   portal: Portal;
@@ -285,6 +299,8 @@ export function PortalShell({
   onLogout: () => Promise<void>;
   /** When set, a bell linking to the portal notifications page is shown. */
   unreadNotifications?: number;
+  /** When set, a profile icon linking here is shown next to the user's email. */
+  profileHref?: string;
   children: ReactNode;
 }) {
   const t = THEME[portal];
@@ -332,7 +348,7 @@ export function PortalShell({
           </div>
           <div className="ml-auto flex items-center gap-2">
             {unreadNotifications !== undefined && <NotificationBell href={`/${portal}/notifications`} unread={unreadNotifications} />}
-            {user && <UserMenu email={user.email} onLogout={onLogout} />}
+            {user && <UserMenu email={user.email} profileHref={profileHref} onLogout={onLogout} />}
           </div>
         </header>
 

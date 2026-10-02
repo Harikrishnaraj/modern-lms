@@ -182,7 +182,10 @@ describe.skipIf(!hasLiveProject)("user management (T-076, live Supabase)", () =>
       const email = `${tag}-invitee@example.com`;
       const r = await inviteUser({ email, role: "content_reviewer" });
       expect(r).toMatchObject({ ok: true });
-      expect((r as { link?: string }).link).toMatch(/^https:\/\//);
+      // An absolute link to this project's Auth verify endpoint (https on the hosted project, http locally).
+      const link = new URL((r as { link?: string }).link!);
+      expect(link.origin).toBe(new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).origin);
+      expect(link.pathname).toBe("/auth/v1/verify");
       const { data } = await svc.from("audit_logs").select("resource_id, action").eq("actor_id", admin.id).eq("action", "user.invited");
       const id = data!.at(-1)!.resource_id as string;
       userIds.push(id);

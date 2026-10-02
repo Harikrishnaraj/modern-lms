@@ -4,6 +4,7 @@ import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, CheckCircle2, Paperclip, Trash2, Upload } from "lucide-react";
 import { RichTextEditor } from "@/components/course-authoring/rich-text-editor";
+import { ScormUploadForm } from "@/components/course-authoring/scorm-upload-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -195,6 +196,10 @@ export function LessonEditor({
             </p>
           )}
         </fieldset>
+      )}
+
+      {lesson.type === "scorm" && (
+        <ScormUploadForm courseId={courseId} lessonId={lesson.id} current={lesson.scormPackage} disabled={busy} />
       )}
 
       <div className="space-y-2">

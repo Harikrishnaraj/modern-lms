@@ -18,7 +18,7 @@ export default async function MfaPage({
   const { next } = await searchParams;
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
-  if (!data.user) redirect("/login?next=%2Fadmin");
+  if (!data.user) redirect(`/login?next=${encodeURIComponent(safeNextPath(next))}`);
   if (!(await needsMfa(supabase))) redirect(safeNextPath(next));
 
   const { data: factors } = await supabase.auth.mfa.listFactors();
@@ -48,7 +48,7 @@ export default async function MfaPage({
           title={setup ? "Set up two-factor authentication" : "Two-factor authentication"}
           description={
             setup
-              ? "Admin accounts require an authenticator app. Scan the QR code, then enter the 6-digit code."
+              ? "This account requires an authenticator app. Scan the QR code, then enter the 6-digit code."
               : "Enter the 6-digit code from your authenticator app."
           }
         />
@@ -67,7 +67,7 @@ export default async function MfaPage({
           )}
           <div className="mb-3 flex items-center gap-2 text-sm text-text-secondary">
             <ShieldCheck className="size-4" aria-hidden="true" />
-            <span>Required for admin access</span>
+            <span>Required for back-office access</span>
           </div>
           <MfaForm onSubmit={verifyMfa.bind(null, next ?? null, factorId)} />
         </CardContent>

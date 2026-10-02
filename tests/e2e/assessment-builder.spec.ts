@@ -2,11 +2,18 @@ import { expect, test, type Page } from "@playwright/test";
 import { loadEnvLocal } from "./support/env";
 import { cleanup, createAssessment, createCourse, createUserWithRole, serviceClient, uniqueTag } from "../support/course-fixtures";
 
+// Question rows render as <p>; the question picker repeats the same text in an <option>.
+const questionRow = (page: Page, text: string) =>
+  page.locator("p").filter({ hasText: new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) });
+
 loadEnvLocal();
 test.use({ storageState: { cookies: [], origins: [] } });
 
 // F-205: build an assessment in the UI, then a learner takes it in the player.
 test.describe("assessment builder", () => {
+  // Each test continues from the previous one (created data, state), so they must run in order
+  // in one worker; with fullyParallel they could land in different workers and fail.
+  test.describe.configure({ mode: "serial" });
   const svc = serviceClient();
   const tag = uniqueTag("ab");
   const userIds: string[] = [];
@@ -79,7 +86,7 @@ test.describe("assessment builder", () => {
     await page.getByLabel("Option 1 is correct").check();
     await page.getByLabel("Explanation").fill("Because it is right.");
     await page.getByRole("button", { name: "Add question" }).last().click();
-    await expect(page.getByText("1. Which is right?")).toBeVisible();
+    await expect(questionRow(page, "1. Which is right?")).toBeVisible();
 
     // Short answer.
     await page.getByRole("button", { name: "Add question" }).first().click();
@@ -87,7 +94,7 @@ test.describe("assessment builder", () => {
     await page.getByLabel("Question", { exact: true }).fill("Say hello");
     await page.getByLabel(/Accepted answers/).fill("hello\nhi there");
     await page.getByRole("button", { name: "Add question" }).last().click();
-    await expect(page.getByText("2. Say hello")).toBeVisible();
+    await expect(questionRow(page, "2. Say hello")).toBeVisible();
 
     // Essay (no key), with more points.
     await page.getByRole("button", { name: "Add question" }).first().click();
@@ -96,7 +103,7 @@ test.describe("assessment builder", () => {
     await page.getByLabel("Points").fill("10");
     await expect(page.getByText("graded by hand after the learner submits")).toBeVisible();
     await page.getByRole("button", { name: "Add question" }).last().click();
-    await expect(page.getByText("3. Discuss testing")).toBeVisible();
+    await expect(questionRow(page, "3. Discuss testing")).toBeVisible();
     await expect(page.getByText("3 questions · 12 points · 1 graded by hand")).toBeVisible();
 
     // Correct option is marked for the author.
@@ -105,17 +112,17 @@ test.describe("assessment builder", () => {
 
     // Reorder with the buttons, then edit a question.
     await page.getByRole("button", { name: "Move question 3 up" }).click();
-    await expect(page.getByText("2. Discuss testing")).toBeVisible();
+    await expect(questionRow(page, "2. Discuss testing")).toBeVisible();
     await page.getByRole("button", { name: "Edit question 1" }).click();
     // In edit mode the label's accessible name includes the current value, so target the form.
     await page.getByRole("form", { name: "Edit question" }).locator("textarea").first().fill("Which is really right?");
     await page.getByRole("button", { name: "Save question" }).click();
-    await expect(page.getByText("1. Which is really right?")).toBeVisible();
+    await expect(questionRow(page, "1. Which is really right?")).toBeVisible();
 
     // Delete needs confirmation.
     await page.getByRole("button", { name: "Delete question 2" }).click();
     await page.getByRole("button", { name: "Keep" }).click();
-    await expect(page.getByText("2. Discuss testing")).toBeVisible();
+    await expect(questionRow(page, "2. Discuss testing")).toBeVisible();
     await page.getByRole("button", { name: "Delete question 2" }).click();
     await page.getByRole("button", { name: "Delete question", exact: true }).click();
     await expect(page.getByText("Discuss testing")).toHaveCount(0);

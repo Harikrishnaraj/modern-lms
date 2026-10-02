@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BarChart3 } from "lucide-react";
+import { SavedReportsPanel } from "@/components/admin/saved-reports-panel";
 import { TrendChart } from "@/components/admin/trend-chart";
 import { EmptyState, PermissionDeniedState } from "@/components/feedback/states";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { RANGES, getDailyAnalytics, getTopCourses, parseRange, summarize } from "@/features/admin/analytics";
+import { getSavedReports } from "@/features/admin/reports";
 import { can } from "@/lib/permissions/can";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
@@ -34,7 +36,11 @@ export default async function AdminAnalyticsPage({
     );
   }
 
-  const [points, top] = await Promise.all([getDailyAnalytics(supabase, range), getTopCourses(supabase, range)]);
+  const [points, top, savedReports] = await Promise.all([
+    getDailyAnalytics(supabase, range),
+    getTopCourses(supabase, range),
+    getSavedReports(supabase),
+  ]);
   const totals = summarize(points);
   const empty = totals.enrollments === 0 && totals.completions === 0 && totals.signups === 0;
 
@@ -104,6 +110,13 @@ export default async function AdminAnalyticsPage({
           </Card>
         </div>
       )}
+
+      <Card className="mt-6">
+        <CardHeader title="Saved reports" description="Save a date range as a CSV export you can re-run or schedule." />
+        <CardContent>
+          <SavedReportsPanel reports={savedReports} />
+        </CardContent>
+      </Card>
     </>
   );
 }

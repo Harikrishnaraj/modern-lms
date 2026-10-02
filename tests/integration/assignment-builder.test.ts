@@ -48,7 +48,7 @@ describe.skipIf(!hasLiveProject)("assignment builder and grading (T-100, live Su
     currentClient = u.client;
   };
   const settings = (over = {}) => ({
-    title: "Report", instructions: "Write it", dueAt: "", maxPoints: 100, allowLate: false, allowText: true, allowFile: true, maxFileMb: 5,
+    title: "Report", instructions: "Write it", dueAt: "", maxPoints: 100, allowLate: false, allowText: true, allowFile: true, maxFileMb: 5, allowedFileTypes: ["pdf", "docx"],
     criteria: [{ title: "Content", description: "Depth", maxPoints: 60 }, { title: "Style", description: "", maxPoints: 40 }],
     ...over,
   });

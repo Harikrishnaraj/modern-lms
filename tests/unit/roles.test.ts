@@ -22,13 +22,21 @@ describe("getPortalPathForUser", () => {
   });
 
   it("sends any back-office role to /admin", async () => {
-    for (const role of ["super_admin", "admin", "support_agent", "content_reviewer", "org_admin"]) {
+    for (const role of ["super_admin", "admin", "support_agent", "content_reviewer"]) {
       expect(await getPortalPathForUser(fakeSupabase([role]), "u1")).toBe("/admin");
     }
   });
 
+  it("sends org_admin to its own scoped portal, not the admin console (T-162)", async () => {
+    expect(await getPortalPathForUser(fakeSupabase(["org_admin"]), "u1")).toBe("/org_admin");
+  });
+
   it("prefers /admin when a user holds both an admin and instructor role", async () => {
     expect(await getPortalPathForUser(fakeSupabase(["instructor", "admin"]), "u1")).toBe("/admin");
+  });
+
+  it("prefers /org_admin even when a user also holds admin (defense in depth against dual-role setup)", async () => {
+    expect(await getPortalPathForUser(fakeSupabase(["admin", "org_admin"]), "u1")).toBe("/org_admin");
   });
 
   it("defaults to /learner when the user has no roles", async () => {

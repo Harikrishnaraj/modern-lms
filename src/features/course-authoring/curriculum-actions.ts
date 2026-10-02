@@ -14,7 +14,7 @@ const titleSchema = z
   .trim()
   .min(1, "Enter a title.")
   .max(200, "Keep the title under 200 characters.");
-const typeSchema = z.enum(["video", "text", "quiz", "assignment"]);
+const typeSchema = z.enum(["video", "text", "quiz", "assignment", "scorm"]);
 
 const DENIED: CurriculumResult = { ok: false, error: "This course is not available." };
 const LOCKED: CurriculumResult = {

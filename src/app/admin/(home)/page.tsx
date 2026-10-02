@@ -60,7 +60,9 @@ export default async function AdminHomePage() {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <section aria-labelledby="pending-heading">
+        {/* min-w-0: grid items default to min-width:auto, which lets a long title or email widen
+            the column past a phone screen instead of truncating/wrapping (T-251). */}
+        <section aria-labelledby="pending-heading" className="min-w-0">
           <Card className="h-full">
             <CardHeader
               title="Pending actions"
@@ -95,7 +97,7 @@ export default async function AdminHomePage() {
           </Card>
         </section>
 
-        <section aria-labelledby="activity-heading">
+        <section aria-labelledby="activity-heading" className="min-w-0">
           <Card className="h-full">
             <CardHeader
               title="Platform activity"
@@ -120,7 +122,7 @@ export default async function AdminHomePage() {
                   {activity.map((a) => (
                     <li key={a.id} className="rounded-control border border-border p-3 text-sm">
                       <p className="font-medium">{describeAction(a.action)}</p>
-                      <p className="text-xs text-text-secondary">
+                      <p className="break-words text-xs text-text-secondary [overflow-wrap:anywhere]">
                         {a.actorEmail ?? "System"} · {new Date(a.createdAt).toLocaleString()}
                       </p>
                     </li>

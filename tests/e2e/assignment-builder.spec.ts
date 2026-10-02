@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { loadEnvLocal } from "./support/env";
-import { cleanup, createCourse, createUserWithRole, serviceClient, uniqueTag } from "../support/course-fixtures";
+import { cleanup, createAssignment, createCourse, createUserWithRole, serviceClient, uniqueTag } from "../support/course-fixtures";
 
 loadEnvLocal();
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -131,8 +131,16 @@ test.describe("assignment builder and grading", () => {
     expect(res?.status()).toBe(404);
     await page.goto("/instructor/grading");
     await expect(page.getByText("Nothing to grade")).toBeVisible();
-    const { data } = await svc.from("assignment_submissions").select("id").limit(1).single();
-    const r2 = await page.goto(`/instructor/grading/${data!.id}`);
+    // A submission on the first instructor's course, made here so the test never depends on the
+    // other test (or leftover data) having created one.
+    const { assignmentId } = await createAssignment(svc, c.versionId, { title: `${tag} Private Work` });
+    const { data, error } = await svc
+      .from("assignment_submissions")
+      .insert({ assignment_id: assignmentId, user_id: learner.id, text_answer: "Mine" })
+      .select("id")
+      .single();
+    if (error) throw error;
+    const r2 = await page.goto(`/instructor/grading/${data.id}`);
     expect(r2?.status()).toBe(404);
   });
 });

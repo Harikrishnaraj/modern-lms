@@ -143,7 +143,7 @@ export default async function InstructorReviewsPage({ searchParams }: Props) {
           action={
             <Link
               href="/instructor/reviews"
-              className={buttonClasses({ variant: "outline", size: "sm" })}
+              className={buttonClasses({ variant: "secondary", size: "sm" })}
             >
               Reset filters
             </Link>

@@ -8,6 +8,7 @@ import {
   Building2,
   CalendarDays,
   ClipboardCheck,
+  ClipboardList,
   CreditCard,
   FileText,
   FolderOpen,
@@ -201,6 +202,13 @@ const instructor: PortalNav = {
           description: "Guided course creation: basics → curriculum → content → readiness.",
           task: "T-051",
           accent: "primary",
+        },
+        {
+          label: "Assignments",
+          href: "/instructor/assignments",
+          icon: ClipboardList,
+          description: "Create and track assignments across your courses.",
+          task: "T-114",
         },
       ],
     },
@@ -505,7 +513,28 @@ const admin: PortalNav = {
   ],
 };
 
-export const NAVIGATION: Record<Portal, PortalNav> = { learner, instructor, admin };
+/* ----------------------------- Org Admin (scoped, own organization only, T-162) ---------------- */
+
+const org_admin: PortalNav = {
+  portal: "org_admin",
+  label: "Org Admin",
+  home: "/org_admin",
+  groups: [
+    {
+      items: [
+        {
+          label: "My Organization",
+          href: "/org_admin",
+          icon: Building2,
+          description: "Members, teams and learning hours for your organization.",
+          task: "T-162",
+        },
+      ],
+    },
+  ],
+};
+
+export const NAVIGATION: Record<Portal, PortalNav> = { learner, instructor, admin, org_admin };
 
 export function allNavItems(portal: Portal): NavItem[] {
   return NAVIGATION[portal].groups.flatMap((g) => g.items);

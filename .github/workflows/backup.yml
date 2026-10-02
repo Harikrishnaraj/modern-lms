@@ -1,0 +1,36 @@
+name: Database backup
+
+# T-249 (F-948, SECURITY.md §24). Supabase's Free plan (this project's current plan) has no
+# automated backups or Point-in-Time Recovery -- those are Pro-plan features -- so this workflow
+# is the project's actual backup mechanism: a weekly pg_dump uploaded as a workflow artifact
+# (an off-Supabase-infrastructure location, satisfying "off-site"). See docs/RUNBOOKS.md for the
+# restore procedure and the one-time setup this workflow needs (the SUPABASE_DB_URL secret).
+
+on:
+  schedule:
+    - cron: "0 5 * * 0" # Sundays 05:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install postgresql-client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Dump database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set. See docs/RUNBOOKS.md for setup." >&2
+            exit 1
+          fi
+          pg_dump "$SUPABASE_DB_URL" --format=custom --file=modern-lms-backup.dump
+
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: modern-lms-db-backup-${{ github.run_id }}
+          path: modern-lms-backup.dump
+          retention-days: 30

@@ -4,6 +4,7 @@ import { can } from "@/lib/permissions/can";
 import { needsMfa } from "@/lib/permissions/mfa";
 import { createClient } from "@/lib/supabase/server";
 import { recordAudit } from "@/services/audit";
+import { clientIp, rateLimit } from "@/services/rate-limit";
 
 // CSV export of the audit log with the same filters as the screen. Checked here as well as in the
 // proxy: signed in, second factor passed, and audit.read. The export itself is audited.
@@ -13,6 +14,9 @@ export async function GET(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
+  if (!(await rateLimit("analytics-export", await clientIp(), user.id))) {
+    return new NextResponse("Too many exports. Please wait a while and try again.", { status: 429 });
+  }
   if ((await needsMfa(supabase)) || !(await can(supabase, user.id, "audit.read"))) {
     return new NextResponse("Forbidden", { status: 403 });
   }

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, Lock } from "lucide-react";
 import { AssignmentEditor } from "@/components/course-authoring/assignment-editor";
 import { PageHeader } from "@/components/layout/page-header";
+import { getAssignmentResources } from "@/features/assignments/resources";
 import { getAssignmentForEditing } from "@/features/course-authoring/assignment-authoring";
 import { getCourseForEditing } from "@/features/course-authoring/queries";
 import { createClient } from "@/lib/supabase/server";
@@ -20,6 +21,7 @@ export default async function AssignmentEditPage({ params }: { params: Promise<{
   if (!course) notFound();
   const assignment = await getAssignmentForEditing(supabase, course.version.id, assignmentId);
   if (!assignment) notFound();
+  const resources = await getAssignmentResources(supabase, assignment.id);
   const { submissions, id: _id, versionId: _v, ...initial } = assignment;
   void _id;
   void _v;
@@ -37,7 +39,14 @@ export default async function AssignmentEditPage({ params }: { params: Promise<{
           This course is locked while it is in review or published, so this assignment cannot be changed.
         </p>
       )}
-      <AssignmentEditor courseId={course.courseId} assignmentId={assignment.id} initial={initial} submissions={submissions} disabled={!course.editable} />
+      <AssignmentEditor
+        courseId={course.courseId}
+        assignmentId={assignment.id}
+        initial={initial}
+        resources={resources.map((r) => ({ key: r.id, name: r.name, size: r.sizeBytes }))}
+        submissions={submissions}
+        disabled={!course.editable}
+      />
     </>
   );
 }

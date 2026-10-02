@@ -22,11 +22,11 @@ test.describe("certificates", () => {
   let goodCode: string;
   let revokedCode: string;
   let goodCertId: string;
+  let instructorId: string;
   const enrollmentIds: string[] = [];
 
   async function issue(courseSlug: string, title: string) {
-    const instructor = userIds[0];
-    const c = await createCourse(svc, instructor, { slug: courseSlug, title });
+    const c = await createCourse(svc, instructorId, { slug: courseSlug, title });
     courseIds.push(c.courseId);
     const { data: enr } = await svc
       .from("enrollments")
@@ -60,7 +60,10 @@ test.describe("certificates", () => {
     const meta = JSON.parse(readFileSync("tests/e2e/.auth/user.meta.json", "utf8"));
     learnerId = meta.userId;
     learnerEmail = meta.email;
-    const instructor = await createUserWithRole(svc, `${tag}-inst`, "instructor");
+    // fullyParallel can run this beforeAll/afterAll pair more than once in one worker; always use
+    // the instructor created in *this* round (userIds[0] may already be deleted by an earlier afterAll).
+    const instructor = await createUserWithRole(svc, `${tag}-inst-${userIds.length}`, "instructor");
+    instructorId = instructor.id;
     userIds.push(instructor.id);
     const good = await issue(`${tag}-good`, `${tag} Valid Course`);
     goodCode = good.code;

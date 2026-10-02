@@ -15,6 +15,7 @@ const rules = (over: Partial<AssignmentRules> = {}): AssignmentRules => ({
   allowText: true,
   allowFile: true,
   maxFileMb: 5,
+  allowedFileTypes: ["pdf", "docx", "zip", "txt", "png", "jpg"],
   ...over,
 });
 

@@ -4,7 +4,7 @@ import { CheckCircle2 } from "lucide-react";
 import { EmptyState } from "@/components/feedback/states";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
-import { filterQueue, getGradingQueue, parseQueueFilter, type QueueFilter } from "@/features/assignments/grading";
+import { filterQueue, getGradingQueue, parseAssignmentFilter, parseQueueFilter, type QueueFilter } from "@/features/assignments/grading";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
 
@@ -22,19 +22,38 @@ export default async function GradingQueuePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const filter = parseQueueFilter((await searchParams).filter);
+  const sp = await searchParams;
+  const filter = parseQueueFilter(sp.filter);
+  const assignment = parseAssignmentFilter(sp.assignment);
   const all = await getGradingQueue(await createClient());
-  const rows = filterQueue(all, filter);
-  const pending = all.filter((r) => r.status !== "graded").length;
+  const scoped = assignment ? all.filter((r) => r.assignmentId === assignment) : all;
+  const rows = filterQueue(all, filter, assignment);
+  const pending = scoped.filter((r) => r.status !== "graded").length;
+  const scopedTitle = assignment ? (scoped[0]?.assignmentTitle ?? "This assignment") : null;
+  const tabHref = (id: QueueFilter) => {
+    const q = new URLSearchParams();
+    if (assignment) q.set("assignment", assignment);
+    if (id !== "pending") q.set("filter", id);
+    const s = q.toString();
+    return s ? `/instructor/grading?${s}` : "/instructor/grading";
+  };
 
   return (
     <>
       <PageHeader title="Grading" description={`${pending} ${pending === 1 ? "submission" : "submissions"} waiting for a grade.`} />
+      {scopedTitle && (
+        <p className="mb-3 text-sm text-text-secondary">
+          Showing submissions for <span className="font-medium text-text">{scopedTitle}</span>.{" "}
+          <Link href={filter === "pending" ? "/instructor/grading" : `/instructor/grading?filter=${filter}`} className="text-primary underline">
+            Show every assignment
+          </Link>
+        </p>
+      )}
       <nav aria-label="Filter submissions" className="mb-4 flex gap-1 border-b border-border">
         {TABS.map((t) => (
           <Link
             key={t.id}
-            href={t.id === "pending" ? "/instructor/grading" : `/instructor/grading?filter=${t.id}`}
+            href={tabHref(t.id)}
             aria-current={t.id === filter ? "page" : undefined}
             className={cn("-mb-px border-b-2 px-3 py-2 text-sm font-medium", t.id === filter ? "border-primary text-primary" : "border-transparent text-text-secondary hover:text-text")}
           >

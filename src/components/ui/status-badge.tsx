@@ -5,6 +5,7 @@ import type { CourseStatus } from "@/features/courses/course-status";
 export type EnrollmentStatus = "active" | "completed" | "paused" | "expired" | "cancelled";
 export type UserStatus = "invited" | "active" | "inactive" | "suspended";
 export type PaymentStatus = "pending" | "paid" | "failed" | "refunded" | "disputed";
+export type AttemptStatus = "in_progress" | "submitted" | "graded";
 
 type StatusMap<S extends string> = Record<S, { label: string; tone: BadgeTone }>;
 
@@ -42,11 +43,18 @@ const payment: StatusMap<PaymentStatus> = {
   disputed: { label: "Disputed", tone: "danger" },
 };
 
+const attempt: StatusMap<AttemptStatus> = {
+  in_progress: { label: "In Progress", tone: "warning" },
+  submitted: { label: "Submitted", tone: "info" },
+  graded: { label: "Graded", tone: "success" },
+};
+
 type Props =
   | { kind: "course"; status: CourseStatus }
   | { kind: "enrollment"; status: EnrollmentStatus }
   | { kind: "user"; status: UserStatus }
-  | { kind: "payment"; status: PaymentStatus };
+  | { kind: "payment"; status: PaymentStatus }
+  | { kind: "attempt"; status: AttemptStatus };
 
 export function StatusBadge(props: Props) {
   const entry =
@@ -56,7 +64,9 @@ export function StatusBadge(props: Props) {
         ? enrollment[props.status]
         : props.kind === "user"
           ? user[props.status]
-          : payment[props.status];
+          : props.kind === "payment"
+          ? payment[props.status]
+          : attempt[props.status];
   return (
     <Badge tone={entry.tone} dot>
       {entry.label}

@@ -125,7 +125,9 @@ export default async function AdminUsersPage({
                 {users.map((u) => (
                   <tr key={u.userId}>
                     <td className="p-3">
-                      <p className="font-medium">{u.fullName ?? u.email ?? "Unknown"}</p>
+                      <Link href={`/admin/users/${u.userId}`} className="font-medium hover:underline">
+                        {u.fullName ?? u.email ?? "Unknown"}
+                      </Link>
                       {u.fullName && <p className="text-xs text-text-secondary">{u.email}</p>}
                     </td>
                     <td className="p-3">{u.roles.map((r) => ROLE_LABEL[r as keyof typeof ROLE_LABEL] ?? r).join(", ") || "None"}</td>

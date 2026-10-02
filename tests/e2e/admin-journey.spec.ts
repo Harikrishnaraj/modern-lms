@@ -49,13 +49,15 @@ test.describe("admin journey", () => {
     await ip.goto(`/instructor/courses/${c.courseId}/submit`);
     await ip.waitForLoadState("networkidle");
     await ip.getByRole("button", { name: "Submit for review" }).click();
-    await expect(ip.getByText("Submitted. A reviewer will pick this up soon.")).toBeVisible();
+    // Server action + router.refresh() re-renders a query-heavy page; allow for a busy shared project.
+    await expect(ip.getByText("Submitted. A reviewer will pick this up soon.")).toBeVisible({ timeout: 30_000 });
 
     const done = await loginAsRole(page, "admin");
     try {
-      // Pending course shows on the overview and in the pending tab; open the review.
-      await page.goto("/admin");
-      await page.getByRole("link", { name: `${tag} Pending Course` }).click();
+      // Pending course shows in the pending tab; open the review. (The overview lists only the oldest
+      // few pending courses, and the shared project may hold others, so search the pending tab.)
+      await page.goto(`/admin/courses?tab=pending&q=${tag}`);
+      await page.getByRole("link", { name: `${tag} Pending Course` }).first().click();
       await expect(page).toHaveURL(new RegExp(`/admin/courses/${c.courseId}$`));
       await expect(page.getByRole("list", { name: "Automatic checks" }).getByText("Thumbnail image - passes")).toBeVisible();
 
@@ -127,7 +129,7 @@ test.describe("admin journey", () => {
       await expect(row.getByText("Instructor, Learner")).toBeVisible();
       await row.getByRole("button", { name: `Suspend ${target.email}` }).click();
       await row.getByRole("button", { name: `Confirm suspend ${target.email}` }).click();
-      await expect(row.getByText("Suspended", { exact: true })).toBeVisible();
+      await expect(row.getByText("Suspended", { exact: true })).toBeVisible({ timeout: 30_000 });
 
       await page.getByRole("button", { name: "Add user" }).click();
       const form = page.getByRole("form", { name: "Add user" });

@@ -36,26 +36,35 @@ test.describe("learner calendar", () => {
 
   test.afterAll(() => cleanup(svc, { learnerIds, courseIds, userIds }));
 
-  test("month view puts the deadline on the right day; navigation, week and agenda views work", async ({ page }) => {
+  test("month view puts the deadline on the right day; navigation, week and agenda views work", async ({ page, isMobile }) => {
     test.setTimeout(120_000);
     await signIn(page, learner);
     await page.goto("/learner/calendar?view=month&date=2031-03-10");
     await expect(page.getByRole("heading", { level: 1, name: "Calendar" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "March 2031" })).toBeVisible();
 
-    const grid = page.getByRole("table", { name: "Month of March 2031" });
-    // 2031-03-18 is a Tuesday.
-    const cell = grid.getByRole("cell", { name: "Tuesday, March 18" });
-    await expect(cell.getByRole("link", { name: new RegExp(`Due: ${tag} Essay`) })).toBeVisible();
-    await expect(grid.getByRole("cell", { name: "Wednesday, March 19" }).getByRole("link")).toHaveCount(0);
-    // The grid shows whole weeks, so early-April days (and their events) trail the month.
-    await expect(grid.getByRole("cell", { name: "Saturday, April 5" }).getByRole("link", { name: new RegExp(`Due: ${tag} Project`) })).toBeVisible();
+    // 2031-03-18 is a Tuesday. Wide screens show a month grid; phones list the month's days instead.
+    if (isMobile) {
+      const days = page.getByRole("list", { name: "Agenda" });
+      await expect(days.getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Tuesday, March 18" }) }).getByRole("link", { name: new RegExp(`Due: ${tag} Essay`) })).toBeVisible();
+      await expect(days.getByRole("heading", { name: "Wednesday, March 19" })).toHaveCount(0);
+    } else {
+      const grid = page.getByRole("table", { name: "Month of March 2031" });
+      const cell = grid.getByRole("cell", { name: "Tuesday, March 18" });
+      await expect(cell.getByRole("link", { name: new RegExp(`Due: ${tag} Essay`) })).toBeVisible();
+      await expect(grid.getByRole("cell", { name: "Wednesday, March 19" }).getByRole("link")).toHaveCount(0);
+      // The grid shows whole weeks, so early-April days (and their events) trail the month.
+      await expect(grid.getByRole("cell", { name: "Saturday, April 5" }).getByRole("link", { name: new RegExp(`Due: ${tag} Project`) })).toBeVisible();
+    }
 
     // Next month has the other deadline.
     await page.waitForLoadState("networkidle");
     await page.getByRole("link", { name: "Next period" }).click();
     await expect(page).toHaveURL(/date=2031-04-01/, { timeout: 30_000 });
-    await expect(page.getByRole("table", { name: "Month of April 2031" }).getByRole("cell", { name: "Saturday, April 5" }).getByRole("link", { name: new RegExp(`${tag} Project`) })).toBeVisible();
+    const april = isMobile
+      ? page.getByRole("list", { name: "Agenda" }).getByRole("listitem").filter({ has: page.getByRole("heading", { name: "Saturday, April 5" }) })
+      : page.getByRole("table", { name: "Month of April 2031" }).getByRole("cell", { name: "Saturday, April 5" });
+    await expect(april.getByRole("link", { name: new RegExp(`${tag} Project`) })).toBeVisible();
     await page.getByRole("link", { name: "Previous period" }).click();
     await expect(page.getByRole("heading", { level: 2, name: "March 2031" })).toBeVisible();
 
